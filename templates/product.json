@@ -11,10 +11,19 @@
   "sections": {
     "main": {
       "type": "product",
+      "disabled": true,
       "settings": {}
+    },
+    "main_product_bundle_pag7Kd": {
+      "type": "main-product-bundle",
+      "name": "Main product bundle",
+      "settings": {
+        "bundle_products": []
+      }
     }
   },
   "order": [
-    "main"
+    "main",
+    "main_product_bundle_pag7Kd"
   ]
 }
