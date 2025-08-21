@@ -1,0 +1,149 @@
+{% comment %}
+  A custom product form that supports bundle configuration
+  - Allows selecting bundle items
+  - Handles quantity updates
+  - Manages bundle pricing
+{% endcomment %}
+
+{%- assign product_form_id = 'product-form-' | append: section.id -%}
+
+<div class="bundle-product-form" data-product-handle="{{ product.handle }}">
+  {%- form 'product', product, id: product_form_id, class: 'form', novalidate: 'novalidate', data-type: 'add-to-cart-form' -%}
+    <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+    
+    <div class="bundle-items" data-bundle-items>
+      {% comment %} Bundle items will be dynamically populated here {% endcomment %}
+    </div>
+
+    <div class="bundle-summary">
+      <div class="bundle-total">
+        Total: <span data-bundle-total>{{ product.selected_or_first_available_variant.price | money }}</span>
+      </div>
+    </div>
+
+    <div class="quantity">
+      <label for="Quantity-{{ section.id }}">Quantity</label>
+      <input
+        type="number"
+        name="quantity"
+        id="Quantity-{{ section.id }}"
+        value="1"
+        min="1"
+        data-bundle-quantity
+      >
+    </div>
+
+    <div class="bundle-submit">
+      <button
+        type="submit"
+        name="add"
+        class="bundle-add-button"
+        {% if product.selected_or_first_available_variant.available == false %}disabled{% endif %}
+        data-bundle-submit
+      >
+        <span>
+          {%- if product.selected_or_first_available_variant.available -%}
+            Add bundle to cart
+          {%- else -%}
+            Sold out
+          {%- endif -%}
+        </span>
+      </button>
+    </div>
+
+    {% comment %} Hidden input for bundle configuration {% endcomment %}
+    <input 
+      type="hidden" 
+      name="properties[bundle_items]" 
+      data-bundle-config
+    >
+  {%- endform -%}
+</div>
+
+{% schema %}
+{
+  "name": "Bundle Product Form",
+  "settings": [
+    {
+      "type": "product_list",
+      "id": "bundle_products",
+      "label": "Bundle Products",
+      "info": "Select products that can be added to bundles"
+    }
+  ]
+}
+{% endschema %}
+
+<style>
+.bundle-product-form {
+  margin: 20px 0;
+}
+
+.bundle-items {
+  margin-bottom: 20px;
+}
+
+.bundle-item {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.bundle-item-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+}
+
+.bundle-item-details {
+  flex-grow: 1;
+}
+
+.bundle-item-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.bundle-item-price {
+  color: #666;
+}
+
+.bundle-item-quantity {
+  width: 60px;
+  padding: 5px;
+}
+
+.bundle-summary {
+  margin: 20px 0;
+  padding: 15px;
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+
+.bundle-total {
+  font-size: 1.2em;
+  font-weight: bold;
+  text-align: right;
+}
+
+.quantity {
+  margin-bottom: 20px;
+}
+
+.bundle-add-button {
+  width: 100%;
+  padding: 15px;
+  background: #000;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.bundle-add-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+</style>
