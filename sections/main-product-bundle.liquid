@@ -235,15 +235,15 @@
             alert('There was an error adding the bundle to cart. Please try again.');
             }
         }
-        }
+    }
 
-        // Initialize bundle product forms
-        document.addEventListener('DOMContentLoaded', () => {
+    // Initialize bundle product forms
+    document.addEventListener('DOMContentLoaded', () => {
         const bundleForms = document.querySelectorAll('.bundle-product-form');
         bundleForms.forEach(form => new BundleProduct(form));
-        });
-
+    });
 </script>
+
 {% schema %}
 {
   "name": "Bundle Product Form",
