@@ -12,9 +12,6 @@
     <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
     
     <div class="bundle-items" data-bundle-items>
-        {% for product in product.metafields.design.your_own.value %}
-            {{ product.title }}
-        {% endfor %}
       {% comment %} Bundle items will be dynamically populated here {% endcomment %}
     </div>
 
@@ -57,7 +54,7 @@
     {% comment %} Hidden input for bundle configuration {% endcomment %}
     <input 
       type="hidden" 
-      name="properties[bundle_items]" 
+      name="attributes[bundle_items]" 
       data-bundle-config
     >
   {%- endform -%}
