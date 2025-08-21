@@ -60,6 +60,190 @@
   {%- endform -%}
 </div>
 
+<script>
+    class BundleProduct {
+        constructor(container) {
+            this.container = container;
+            this.productHandle = container.dataset.productHandle;
+            this.form = container.querySelector('form');
+            this.bundleItemsContainer = container.querySelector('[data-bundle-items]');
+            this.bundleConfigInput = container.querySelector('[data-bundle-config]');
+            this.bundleTotalElement = container.querySelector('[data-bundle-total]');
+            this.quantityInput = container.querySelector('[data-bundle-quantity]');
+
+            this.bundleItems = [];
+            this.init();
+        }
+
+        async init() {
+            await this.loadProductData();
+            this.setupEventListeners();
+            this.render();
+        }
+
+        async loadProductData() {
+            try {
+            // Load the main product data
+            const response = await fetch(`/products/${this.productHandle}.js`);
+            this.product = await response.json();
+
+            // Load bundle items data (you'll need to set this up in your theme settings or metafields)
+            this.bundleItems = await this.loadBundleItems();
+            
+            this.updateBundleConfiguration();
+            } catch (error) {
+            console.error('Error loading product data:', error);
+            }
+        }
+
+        async loadBundleItems() {
+            // This is an example - you should modify this to load your bundle items
+            // You could load this from theme settings, metafields, or a custom endpoint
+            const bundleItemHandles = [
+            'example-product-1',
+            'example-product-2'
+            ];
+
+            const items = await Promise.all(
+            bundleItemHandles.map(async handle => {
+                const response = await fetch(`/products/${handle}.js`);
+                const product = await response.json();
+                return {
+                variantId: product.variants[0].id,
+                title: product.title,
+                price: product.variants[0].price,
+                image: product.featured_image,
+                quantity: 1
+                };
+            })
+            );
+
+            return items;
+        }
+
+        setupEventListeners() {
+            // Handle quantity changes for bundle items
+            this.bundleItemsContainer.addEventListener('change', event => {
+            if (event.target.matches('.bundle-item-quantity')) {
+                const itemIndex = parseInt(event.target.dataset.itemIndex);
+                this.bundleItems[itemIndex].quantity = parseInt(event.target.value);
+                this.updateBundleConfiguration();
+                this.updateTotalPrice();
+            }
+            });
+
+            // Handle form submission
+            this.form.addEventListener('submit', this.handleSubmit.bind(this));
+
+            // Handle main quantity changes
+            this.quantityInput.addEventListener('change', () => {
+            this.updateBundleConfiguration();
+            this.updateTotalPrice();
+            });
+        }
+
+        updateBundleConfiguration() {
+            const config = this.bundleItems.map(item => ({
+            variantId: item.variantId.toString(),
+            quantity: item.quantity,
+            price: item.price / 100 // Convert cents to dollars
+            }));
+
+            this.bundleConfigInput.value = JSON.stringify(config);
+        }
+
+        updateTotalPrice() {
+            const basePrice = this.calculateBasePrice();
+            const quantity = parseInt(this.quantityInput.value);
+            const total = basePrice * quantity;
+
+            this.bundleTotalElement.textContent = this.formatMoney(total);
+        }
+
+        calculateBasePrice() {
+            return this.bundleItems.reduce((total, item) => {
+            return total + (item.price * item.quantity);
+            }, 0);
+        }
+
+        formatMoney(cents) {
+            return (cents / 100).toLocaleString('en-US', {
+            style: 'currency',
+            currency: 'USD'
+            });
+        }
+
+        render() {
+            this.bundleItemsContainer.innerHTML = this.bundleItems.map((item, index) => `
+            <div class="bundle-item">
+                <img 
+                class="bundle-item-image" 
+                src="${item.image}"
+                alt="${item.title}"
+                >
+                <div class="bundle-item-details">
+                <div class="bundle-item-title">${item.title}</div>
+                <div class="bundle-item-price">${this.formatMoney(item.price)}</div>
+                </div>
+                <input
+                type="number"
+                class="bundle-item-quantity"
+                value="${item.quantity}"
+                min="0"
+                data-item-index="${index}"
+                >
+            </div>
+            `).join('');
+
+            this.updateTotalPrice();
+        }
+
+        async handleSubmit(event) {
+            event.preventDefault();
+
+            const formData = new FormData(this.form);
+            const quantity = parseInt(formData.get('quantity'));
+            const variantId = formData.get('id');
+
+            try {
+            // Add the main product to cart with bundle configuration
+            const response = await fetch('/cart/add.js', {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                items: [{
+                    id: variantId,
+                    quantity: quantity,
+                    properties: {
+                    bundle_items: this.bundleConfigInput.value
+                    }
+                }]
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to add bundle to cart');
+            }
+
+            // Handle successful addition (you can customize this)
+            window.location.href = '/cart';
+            } catch (error) {
+            console.error('Error adding bundle to cart:', error);
+            // Handle error (you can customize this)
+            alert('There was an error adding the bundle to cart. Please try again.');
+            }
+        }
+        }
+
+        // Initialize bundle product forms
+        document.addEventListener('DOMContentLoaded', () => {
+        const bundleForms = document.querySelectorAll('.bundle-product-form');
+        bundleForms.forEach(form => new BundleProduct(form));
+        });
+
+</script>
 {% schema %}
 {
   "name": "Bundle Product Form",
