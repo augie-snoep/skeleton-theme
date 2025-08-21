@@ -209,36 +209,22 @@
 
     try {
       // Add the main product to cart with bundle configuration
-      // Prepare the bundle items
-      const bundleConfig = JSON.parse(this.bundleConfigInput.value);
-      
-      // Create an array of items to add to cart
-      const items = [
-        // Main bundle product
-        {
-          id: variantId,
-          quantity: quantity,
-          attributes: [{
-            key: "bundle_items",
-            value: this.bundleConfigInput.value
-          }]
-        },
-        // Individual bundle items
-        ...bundleConfig.map(item => ({
-          id: item.variantId.split('/').pop(), // Extract the numeric ID
-          quantity: item.quantity * quantity, // Multiply by main bundle quantity
-          properties: {
-            _bundled_with: variantId // Reference to the main bundle product
-          }
-        }))
-      ];
-
+      // Add only the main bundle product with its configuration
       const response = await fetch('/cart/add.js', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ items })
+        body: JSON.stringify({
+          items: [{
+            id: variantId,
+            quantity: quantity,
+            attributes: [{
+              key: "bundle_items",
+              value: this.bundleConfigInput.value
+            }]
+          }]
+        })
       });
 
       if (!response.ok) {
@@ -260,7 +246,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const bundleForms = document.querySelectorAll('.bundle-product-form');
   bundleForms.forEach(form => new BundleProduct(form));
 });
-
 </script>
 
 {% schema %}
