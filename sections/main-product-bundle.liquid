@@ -104,7 +104,7 @@
             // You could load this from theme settings, metafields, or a custom endpoint
             const bundleItemHandles = [
                 {% for item in product.metafields.design.your_own.value %}
-                    '{{ item.url }}'{% unless forloop.last %},{% endunless %}
+                    '{{ item.handle }}'{% unless forloop.last %},{% endunless %}
                 {% endfor %}
             ];
 
