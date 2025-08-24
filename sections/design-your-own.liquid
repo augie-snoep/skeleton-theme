@@ -9,7 +9,7 @@
 
 <div class="bundle-product-form" 
   data-product-handle="{{ product.handle }}"
-  data-bundle-products="{{ product.metafields.design.your_own.references | map: 'handle' | join: ',' | escape }}"
+  data-bundle-products="{{ product.metafields.design.your_own.value | map: 'handle' | join: ',' | escape }}"
 >
   {%- form 'product', product, id: product_form_id, class: 'form', novalidate: 'novalidate', data-type: 'add-to-cart-form' -%}
     <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
