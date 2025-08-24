@@ -7,7 +7,10 @@
 
 {%- assign product_form_id = 'product-form-' | append: section.id -%}
 
-<div class="bundle-product-form" data-product-handle="{{ product.handle }}">
+<div class="bundle-product-form" 
+  data-product-handle="{{ product.handle }}"
+  data-bundle-products="{{ product.metafields.design.your_own.references | map: 'handle' | join: ',' | escape }}"
+>
   {%- form 'product', product, id: product_form_id, class: 'form', novalidate: 'novalidate', data-type: 'add-to-cart-form' -%}
     <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
     
@@ -117,18 +120,21 @@ class BundleProduct {
 
   async loadAvailableOptions() {
     try {
-      // Get the product references from the metafield
-      const metafieldValue = {{ product.metafields.design.your_own | json }};
+      // Get product handles from the data attribute
+      const bundleProductsStr = this.container.dataset.bundleProducts;
       
-      if (!metafieldValue) {
+      if (!bundleProductsStr) {
         console.warn('No products configured in design.your_own metafield');
         return [];
       }
 
-      // Load data for each referenced product
-      const productPromises = metafieldValue.references.map(async (referencedProduct) => {
+      // Split the comma-separated handles
+      const productHandles = bundleProductsStr.split(',');
+
+      // Load data for each product handle
+      const productPromises = productHandles.map(async (handle) => {
         try {
-          const response = await fetch(`/products/${referencedProduct.handle}.js`);
+          const response = await fetch(`/products/${handle}.js`);
           const productData = await response.json();
           
           // Get the first available variant or the selected variant
@@ -144,7 +150,7 @@ class BundleProduct {
             handle: productData.handle
           };
         } catch (error) {
-          console.error(`Error loading product ${referencedProduct.handle}:`, error);
+          console.error(`Error loading product ${handle}:`, error);
           return null;
         }
       });
