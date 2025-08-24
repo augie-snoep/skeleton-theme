@@ -112,6 +112,46 @@
   {%- endform -%}
 </div>
 
+{% schema %}
+{
+  "name": "DYO - modern",
+  "settings": [
+    {
+      "type": "range",
+      "id": "min_bundle_size",
+      "label": "Minimum Bundle Size",
+      "default": 3,
+      "min": 1,
+      "max": 50,
+      "step": 1,
+      "info": "Minimum number of products customer must select"
+    },
+    {
+      "type": "range",
+      "id": "max_bundle_size",
+      "label": "Maximum Bundle Size",
+      "default": 10,
+      "min": 2,
+      "max": 99,
+      "step": 1,
+      "info": "Maximum number of products customer can select (up to 99)"
+    },
+    {
+      "type": "product_list",
+      "id": "bundle_products",
+      "label": "Bundle Products",
+      "info": "Select products that can be added to bundles"
+    }
+  ],
+  "presets": [
+    {
+      "name": "DYO - modern",
+      "category": "Product"
+    }
+  ]
+}
+{% endschema %}
+
 <style>
 .modern-bundle-form {
   max-width: 800px;
