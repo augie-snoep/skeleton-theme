@@ -138,6 +138,7 @@ class BundleProduct {
     this.bundleCountElement = container.querySelector('[data-bundle-count]');
     this.bundleSizeElement = container.querySelector('[data-bundle-size]');
     this.bundleSizeInput = container.querySelector('#bundle-size-input');
+    this.bundleSizeDisplay = container.querySelector('[data-bundle-size-display]');
     this.quantityInput = container.querySelector('[data-bundle-quantity]');
     this.submitButton = container.querySelector('[data-bundle-submit]');
     this.buttonText = container.querySelector('[data-button-text]');
@@ -248,8 +249,6 @@ class BundleProduct {
     });
 
     // Handle bundle size changes
-    this.bundleSizeDisplay = container.querySelector('[data-bundle-size-display]');
-    
     // Update on both change and input events for smooth slider interaction
     ['change', 'input'].forEach(eventType => {
       this.bundleSizeInput.addEventListener(eventType, () => {
