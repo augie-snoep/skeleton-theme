@@ -1,0 +1,659 @@
+{% comment %}
+  A custom product form that supports bundle configuration with empty boxes
+  - Shows empty boxes that can be filled with products
+  - Displays available options below
+  - Click to add products to empty boxes
+{% endcomment %}
+
+{%- assign product_form_id = 'product-form-' | append: section.id -%}
+
+<div class="bundle-product-form" data-product-handle="{{ product.handle }}">
+  {%- form 'product', product, id: product_form_id, class: 'form', novalidate: 'novalidate', data-type: 'add-to-cart-form' -%}
+    <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+    
+    <!-- Empty boxes section -->
+    <div class="bundle-boxes-section">
+      <h3>Your Bundle ({{ section.settings.bundle_size | default: 10 }} items)</h3>
+      <div class="bundle-boxes" data-bundle-boxes>
+        <!-- Empty boxes will be generated here -->
+      </div>
+    </div>
+
+    <!-- Available options section -->
+    <div class="bundle-options-section">
+      <h3>Available Options</h3>
+      <div class="bundle-options" data-bundle-options>
+        <!-- Options will be populated here -->
+      </div>
+    </div>
+
+    <div class="bundle-summary">
+      <div class="bundle-total">
+        Total: <span data-bundle-total>$0.00</span>
+      </div>
+      <div class="bundle-count">
+        Items selected: <span data-bundle-count>0</span> / {{ section.settings.bundle_size | default: 10 }}
+      </div>
+    </div>
+
+    <div class="quantity">
+      <label for="Quantity-{{ section.id }}">Bundle Quantity</label>
+      <input
+        type="number"
+        name="quantity"
+        id="Quantity-{{ section.id }}"
+        value="1"
+        min="1"
+        data-bundle-quantity
+      >
+    </div>
+
+    <div class="bundle-submit">
+      <button
+        type="submit"
+        name="add"
+        class="bundle-add-button"
+        disabled
+        data-bundle-submit
+      >
+        <span data-button-text>
+          Add bundle to cart
+        </span>
+      </button>
+    </div>
+
+    <!-- Hidden input for bundle configuration -->
+    <input 
+      type="hidden" 
+      name="attributes[bundle_items]" 
+      data-bundle-config
+    >
+  {%- endform -%}
+</div>
+
+<script>
+
+class BundleProduct {
+  constructor(container) {
+    this.container = container;
+    this.productHandle = container.dataset.productHandle;
+    this.form = container.querySelector('form');
+    this.bundleBoxesContainer = container.querySelector('[data-bundle-boxes]');
+    this.bundleOptionsContainer = container.querySelector('[data-bundle-options]');
+    this.bundleConfigInput = container.querySelector('[data-bundle-config]');
+    this.bundleTotalElement = container.querySelector('[data-bundle-total]');
+    this.bundleCountElement = container.querySelector('[data-bundle-count]');
+    this.quantityInput = container.querySelector('[data-bundle-quantity]');
+    this.submitButton = container.querySelector('[data-bundle-submit]');
+    this.buttonText = container.querySelector('[data-button-text]');
+
+    this.bundleSize = {{ section.settings.bundle_size | default: 10 }};
+    this.bundleBoxes = Array(this.bundleSize).fill(null);
+    this.availableOptions = [];
+    this.selectedBoxIndex = null;
+
+    this.init();
+  }
+
+  async init() {
+    await this.loadProductData();
+    this.setupEventListeners();
+    this.render();
+  }
+
+  async loadProductData() {
+    try {
+      // Load the main product data
+      const response = await fetch(`/products/${this.productHandle}.js`);
+      this.product = await response.json();
+
+      // Load available options
+      this.availableOptions = await this.loadAvailableOptions();
+      
+    } catch (error) {
+      console.error('Error loading product data:', error);
+    }
+  }
+
+  async loadAvailableOptions() {
+    // Load bundle options from metafields or theme settings
+    const optionHandles = [
+      {% if section.settings.bundle_products %}
+        {% for product in section.settings.bundle_products %}
+          '{{ product.handle }}'{% unless forloop.last %},{% endunless %}
+        {% endfor %}
+      {% else %}
+        {% for item in product.metafields.custom.bundle_options.value %}
+          '{{ item.handle }}'{% unless forloop.last %},{% endunless %}
+        {% endfor %}
+      {% endif %}
+    ];
+
+    const options = await Promise.all(
+      optionHandles.map(async handle => {
+        try {
+          const response = await fetch(`/products/${handle}.js`);
+          const product = await response.json();
+          return {
+            id: product.id,
+            variantId: product.variants[0].id,
+            handle: product.handle,
+            title: product.title,
+            price: product.variants[0].price,
+            image: product.featured_image || '/assets/placeholder.svg',
+            available: product.variants[0].available
+          };
+        } catch (error) {
+          console.error(`Error loading product ${handle}:`, error);
+          return null;
+        }
+      })
+    );
+
+    return options.filter(option => option !== null);
+  }
+
+  setupEventListeners() {
+    // Handle box clicks (to remove items)
+    this.bundleBoxesContainer.addEventListener('click', event => {
+      const box = event.target.closest('.bundle-box');
+      if (box && !box.classList.contains('empty')) {
+        const boxIndex = parseInt(box.dataset.boxIndex);
+        this.removeFromBox(boxIndex);
+      }
+    });
+
+    // Handle option clicks (to add items)
+    this.bundleOptionsContainer.addEventListener('click', event => {
+      const option = event.target.closest('.bundle-option');
+      if (option && option.classList.contains('available')) {
+        const optionId = parseInt(option.dataset.optionId);
+        this.addToNextEmptyBox(optionId);
+      }
+    });
+
+    // Handle form submission
+    this.form.addEventListener('submit', this.handleSubmit.bind(this));
+
+    // Handle quantity changes
+    this.quantityInput.addEventListener('change', () => {
+      this.updateTotalPrice();
+    });
+  }
+
+  addToNextEmptyBox(optionId) {
+    const emptyBoxIndex = this.bundleBoxes.findIndex(box => box === null);
+    if (emptyBoxIndex === -1) {
+      alert('All boxes are full! Remove an item first.');
+      return;
+    }
+
+    const option = this.availableOptions.find(opt => opt.id === optionId);
+    if (option) {
+      this.bundleBoxes[emptyBoxIndex] = { ...option };
+      this.updateDisplay();
+      this.updateConfiguration();
+    }
+  }
+
+  removeFromBox(boxIndex) {
+    if (this.bundleBoxes[boxIndex]) {
+      this.bundleBoxes[boxIndex] = null;
+      this.updateDisplay();
+      this.updateConfiguration();
+    }
+  }
+
+  updateDisplay() {
+    this.renderBoxes();
+    this.renderOptions();
+    this.updateTotalPrice();
+    this.updateSubmitButton();
+  }
+
+  updateConfiguration() {
+    const config = this.bundleBoxes
+      .filter(box => box !== null)
+      .map(box => ({
+        variantId: box.variantId.toString(),
+        quantity: 1,
+        price: box.price / 100
+      }));
+
+    this.bundleConfigInput.value = JSON.stringify(config);
+  }
+
+  updateTotalPrice() {
+    const basePrice = this.bundleBoxes.reduce((total, box) => {
+      return total + (box ? box.price : 0);
+    }, 0);
+    
+    const quantity = parseInt(this.quantityInput.value);
+    const total = basePrice * quantity;
+
+    this.bundleTotalElement.textContent = this.formatMoney(total);
+    
+    const filledBoxes = this.bundleBoxes.filter(box => box !== null).length;
+    this.bundleCountElement.textContent = filledBoxes;
+  }
+
+  updateSubmitButton() {
+    const filledBoxes = this.bundleBoxes.filter(box => box !== null).length;
+    const isComplete = filledBoxes === this.bundleSize;
+    
+    this.submitButton.disabled = !isComplete;
+    this.buttonText.textContent = isComplete 
+      ? 'Add bundle to cart' 
+      : `Add ${this.bundleSize - filledBoxes} more items`;
+  }
+
+  formatMoney(cents) {
+    return (cents / 100).toLocaleString('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    });
+  }
+
+  renderBoxes() {
+    this.bundleBoxesContainer.innerHTML = this.bundleBoxes.map((box, index) => `
+      <div class="bundle-box ${box ? 'filled' : 'empty'}" data-box-index="${index}">
+        ${box ? `
+          <img 
+            class="box-image" 
+            src="${box.image}"
+            alt="${box.title}"
+          >
+          <div class="box-overlay">
+            <span class="remove-icon">×</span>
+          </div>
+          <div class="box-title">${box.title}</div>
+          <div class="box-price">${this.formatMoney(box.price)}</div>
+        ` : `
+          <div class="placeholder-content">
+            <div class="placeholder-icon">+</div>
+            <div class="placeholder-text">Empty</div>
+          </div>
+        `}
+      </div>
+    `).join('');
+  }
+
+  renderOptions() {
+    this.bundleOptionsContainer.innerHTML = this.availableOptions.map(option => `
+      <div class="bundle-option ${option.available ? 'available' : 'unavailable'}" data-option-id="${option.id}">
+        <img 
+          class="option-image" 
+          src="${option.image}"
+          alt="${option.title}"
+        >
+        <div class="option-details">
+          <div class="option-title">${option.title}</div>
+          <div class="option-price">${this.formatMoney(option.price)}</div>
+        </div>
+        ${!option.available ? '<div class="unavailable-overlay">Sold Out</div>' : ''}
+      </div>
+    `).join('');
+  }
+
+  render() {
+    this.renderBoxes();
+    this.renderOptions();
+    this.updateTotalPrice();
+    this.updateSubmitButton();
+  }
+
+  async handleSubmit(event) {
+    event.preventDefault();
+
+    const filledBoxes = this.bundleBoxes.filter(box => box !== null).length;
+    if (filledBoxes !== this.bundleSize) {
+      alert(`Please fill all ${this.bundleSize} boxes before adding to cart.`);
+      return;
+    }
+
+    const formData = new FormData(this.form);
+    const quantity = parseInt(formData.get('quantity'));
+
+    try {
+      const bundleId = Date.now().toString();
+      const bundleItems = JSON.parse(this.bundleConfigInput.value);
+      
+      const response = await fetch('/cart/add.js', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: bundleItems.map(item => ({
+            id: parseInt(item.variantId),
+            quantity: item.quantity * quantity,
+            properties: {
+              '_time': bundleId,
+              '_bundle': 'true'
+            }
+          }))
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Cart add error:', errorData);
+        throw new Error(errorData.message || 'Failed to add bundle to cart');
+      }
+
+      const result = await response.json();
+      console.log('Bundle added successfully:', result);
+
+      // Handle successful addition
+      window.location.href = '/cart';
+    } catch (error) {
+      console.error('Error adding bundle to cart:', error);
+      alert('There was an error adding the bundle to cart. Please try again.');
+    }
+  }
+}
+
+// Initialize bundle product forms
+document.addEventListener('DOMContentLoaded', () => {
+  const bundleForms = document.querySelectorAll('.bundle-product-form');
+  bundleForms.forEach(form => new BundleProduct(form));
+});
+
+</script>
+
+{% schema %}
+{
+  "name": "Design your own",
+  "settings": [
+    {
+      "type": "number",
+      "id": "bundle_size",
+      "label": "Bundle Size",
+      "default": 10,
+      "info": "Number of empty boxes to display"
+    },
+    {
+      "type": "product_list",
+      "id": "bundle_products",
+      "label": "Bundle Products",
+      "info": "Select products that can be added to bundles"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Design your own",
+      "category": "Product"
+    }
+  ]
+}
+{% endschema %}
+
+<style>
+.bundle-product-form {
+  margin: 20px 0;
+}
+
+.bundle-boxes-section,
+.bundle-options-section {
+  margin-bottom: 30px;
+}
+
+.bundle-boxes-section h3,
+.bundle-options-section h3 {
+  margin-bottom: 15px;
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+/* Bundle boxes styles */
+.bundle-boxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.bundle-box {
+  position: relative;
+  aspect-ratio: 1;
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #fafafa;
+}
+
+.bundle-box.empty {
+  border-style: dashed;
+  border-color: #ccc;
+}
+
+.bundle-box.empty:hover {
+  border-color: #999;
+  background: #f0f0f0;
+}
+
+.bundle-box.filled {
+  border-style: solid;
+  border-color: #007c89;
+  background: #fff;
+  padding: 8px;
+}
+
+.bundle-box.filled:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 124, 137, 0.15);
+}
+
+.bundle-box.filled:hover .box-overlay {
+  opacity: 1;
+}
+
+.box-image {
+  width: 100%;
+  height: 70%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.box-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 6px;
+}
+
+.remove-icon {
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.box-title {
+  font-size: 0.8em;
+  text-align: center;
+  margin-top: 4px;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+.box-price {
+  font-size: 0.7em;
+  color: #666;
+  text-align: center;
+}
+
+.placeholder-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #999;
+}
+
+.placeholder-icon {
+  font-size: 24px;
+  margin-bottom: 5px;
+}
+
+.placeholder-text {
+  font-size: 0.8em;
+}
+
+/* Bundle options styles */
+.bundle-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 15px;
+}
+
+.bundle-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.bundle-option.available:hover {
+  border-color: #007c89;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 124, 137, 0.1);
+}
+
+.bundle-option.unavailable {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.option-image {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.option-details {
+  flex-grow: 1;
+}
+
+.option-title {
+  font-weight: 500;
+  margin-bottom: 4px;
+  font-size: 0.9em;
+}
+
+.option-price {
+  color: #666;
+  font-size: 0.8em;
+}
+
+.unavailable-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8em;
+  color: #999;
+  border-radius: 8px;
+}
+
+/* Bundle summary styles */
+.bundle-summary {
+  margin: 30px 0;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bundle-total {
+  font-size: 1.3em;
+  font-weight: bold;
+}
+
+.bundle-count {
+  font-size: 0.9em;
+  color: #666;
+}
+
+.quantity {
+  margin-bottom: 20px;
+}
+
+.quantity label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.quantity input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 80px;
+}
+
+.bundle-add-button {
+  width: 100%;
+  padding: 15px;
+  background: #007c89;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1em;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.bundle-add-button:hover:not(:disabled) {
+  background: #006570;
+}
+
+.bundle-add-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .bundle-boxes {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+  }
+  
+  .bundle-options {
+    grid-template-columns: 1fr;
+  }
+  
+  .bundle-summary {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+}
+</style>
