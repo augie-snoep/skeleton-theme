@@ -16,14 +16,24 @@
     },
     "main_product_bundle_pag7Kd": {
       "type": "main-product-bundle",
+      "disabled": true,
       "name": "Main product bundle",
       "settings": {
+        "bundle_products": []
+      }
+    },
+    "design_your_own_UURVQt": {
+      "type": "design-your-own",
+      "name": "Design your own",
+      "settings": {
+        "bundle_size": 10,
         "bundle_products": []
       }
     }
   },
   "order": [
     "main",
-    "main_product_bundle_pag7Kd"
+    "main_product_bundle_pag7Kd",
+    "design_your_own_UURVQt"
   ]
 }
