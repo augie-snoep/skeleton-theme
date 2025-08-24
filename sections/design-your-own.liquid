@@ -116,41 +116,20 @@ class BundleProduct {
   }
 
   async loadAvailableOptions() {
-    // Load bundle options from metafields or theme settings
-    const optionHandles = [
-      {% if section.settings.bundle_products %}
-        {% for product in section.settings.bundle_products %}
-          '{{ product.handle }}'{% unless forloop.last %},{% endunless %}
-        {% endfor %}
-      {% else %}
-        {% for item in product.metafields.custom.bundle_options.value %}
-          '{{ item.handle }}'{% unless forloop.last %},{% endunless %}
-        {% endfor %}
-      {% endif %}
-    ];
+    // Get available options from the data attribute or use fallback
+    const availableProducts = this.container.dataset.availableProducts;
+    
+    if (availableProducts) {
+      try {
+        return JSON.parse(availableProducts);
+      } catch (error) {
+        console.error('Error parsing available products:', error);
+      }
+    }
 
-    const options = await Promise.all(
-      optionHandles.map(async handle => {
-        try {
-          const response = await fetch(`/products/${handle}.js`);
-          const product = await response.json();
-          return {
-            id: product.id,
-            variantId: product.variants[0].id,
-            handle: product.handle,
-            title: product.title,
-            price: product.variants[0].price,
-            image: product.featured_image || '/assets/placeholder.svg',
-            available: product.variants[0].available
-          };
-        } catch (error) {
-          console.error(`Error loading product ${handle}:`, error);
-          return null;
-        }
-      })
-    );
-
-    return options.filter(option => option !== null);
+    // Fallback: Load some sample products or return empty array
+    console.warn('No available products configured');
+    return [];
   }
 
   setupEventListeners() {
