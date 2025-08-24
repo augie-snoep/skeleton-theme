@@ -102,7 +102,7 @@ class BundleProduct {
     // You could load this from theme settings, metafields, or a custom endpoint
     const bundleItemHandles = [
       {% for item in product.metafields.design.your_own.value %}
-            '{{ item.handle }}'{% unless forloop.last %},{% endunless %}
+          '{{ item.handle }}'{% unless forloop.last %},{% endunless %}
         {% endfor %}
     ];
 
@@ -226,7 +226,7 @@ class BundleProduct {
             id: item.variantId.split('/').pop(), // Extract the numeric ID
             quantity: item.quantity * quantity,
             attributes: [{
-              key: "_bundle_id",
+              key: "_time",
               value: bundleId
             }]
           }))
