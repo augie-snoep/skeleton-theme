@@ -7,7 +7,7 @@
 
 {%- assign product_form_id = 'product-form-' | append: section.id -%}
 
-{%- assign bundle_products = product.metafields.design.your_own.references -%}
+{%- assign bundle_products = product.metafields.design.your_own.value -%}
 {%- assign products_data = '' -%}
 {%- for ref_product in bundle_products -%}
   {%- assign variant = ref_product.variants.first -%}
