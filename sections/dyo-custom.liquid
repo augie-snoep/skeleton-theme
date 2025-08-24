@@ -39,18 +39,24 @@
     <div class="bundle-size-selection">
       <label for="bundle-size-input">How many items would you like in your bundle?</label>
       <div class="bundle-size-input-wrapper">
-        <input 
-          type="number" 
-          id="bundle-size-input" 
-          class="bundle-size-input"
-          value="{{ section.settings.min_bundle_size | default: 3 }}"
-          min="{{ section.settings.min_bundle_size | default: 3 }}"
-          max="{{ section.settings.max_bundle_size | default: 10 }}"
-          data-min-size="{{ section.settings.min_bundle_size | default: 3 }}"
-          data-max-size="{{ section.settings.max_bundle_size | default: 10 }}"
-        >
+        <div class="bundle-size-slider-container">
+          <input 
+            type="range" 
+            id="bundle-size-input" 
+            class="bundle-size-slider"
+            value="{{ section.settings.min_bundle_size | default: 3 }}"
+            min="{{ section.settings.min_bundle_size | default: 3 }}"
+            max="{{ section.settings.max_bundle_size | default: 10 }}"
+            data-min-size="{{ section.settings.min_bundle_size | default: 3 }}"
+            data-max-size="{{ section.settings.max_bundle_size | default: 10 }}"
+          >
+          <div class="bundle-size-value">
+            <span data-bundle-size-display>{{ section.settings.min_bundle_size | default: 3 }}</span> items
+          </div>
+        </div>
         <div class="bundle-size-hint">
-          Min: {{ section.settings.min_bundle_size | default: 3 }} / Max: {{ section.settings.max_bundle_size | default: 10 }}
+          <span class="bundle-size-min">Min: {{ section.settings.min_bundle_size | default: 3 }}</span>
+          <span class="bundle-size-max">Max: {{ section.settings.max_bundle_size | default: 10 }}</span>
         </div>
       </div>
     </div>
@@ -242,21 +248,22 @@ class BundleProduct {
     });
 
     // Handle bundle size changes
-    this.bundleSizeInput.addEventListener('change', () => {
-      const newSize = parseInt(this.bundleSizeInput.value);
-      
-      // Validate input
-      if (newSize < this.minBundleSize) {
-        this.bundleSizeInput.value = this.minBundleSize;
-        return;
-      }
-      if (newSize > this.maxBundleSize) {
-        this.bundleSizeInput.value = this.maxBundleSize;
-        return;
-      }
-
-      // Update bundle size
-      this.updateBundleSize(newSize);
+    this.bundleSizeDisplay = container.querySelector('[data-bundle-size-display]');
+    
+    // Update on both change and input events for smooth slider interaction
+    ['change', 'input'].forEach(eventType => {
+      this.bundleSizeInput.addEventListener(eventType, () => {
+        const newSize = parseInt(this.bundleSizeInput.value);
+        
+        // Update the display immediately on slider move
+        if (eventType === 'input') {
+          this.bundleSizeDisplay.textContent = newSize;
+          return;
+        }
+        
+        // Only update the bundle on the change event
+        this.updateBundleSize(newSize);
+      });
     });
 
     // Handle load more button
@@ -276,7 +283,7 @@ class BundleProduct {
       return;
     }
 
-    const option = this.availableOptions.find(opt => opt.id === optionId);
+    const option = this.availableOptions.find(opt => opt.variantId === optionId);
     if (option) {
       this.bundleBoxes[emptyBoxIndex] = { ...option };
       this.updateDisplay();
@@ -393,7 +400,7 @@ class BundleProduct {
 
   renderOptions() {
     this.bundleOptionsContainer.innerHTML = this.availableOptions.map(option => `
-      <div class="bundle-option ${option.available ? 'available' : 'unavailable'}" data-option-id="${option.id}">
+      <div class="bundle-option ${option.available ? 'available' : 'unavailable'}" data-option-id="${option.variantId}">
         <img 
           class="option-image" 
           src="${option.image}"
@@ -509,8 +516,9 @@ document.addEventListener('DOMContentLoaded', () => {
       "id": "min_bundle_size",
       "label": "Minimum Bundle Size",
       "default": 3,
-      "min": 3,
-      "max": 99,
+      "min": 1,
+      "max": 50,
+      "step": 1,
       "info": "Minimum number of products customer must select"
     },
     {
@@ -518,8 +526,9 @@ document.addEventListener('DOMContentLoaded', () => {
       "id": "max_bundle_size",
       "label": "Maximum Bundle Size",
       "default": 10,
-      "min": 1,
+      "min": 2,
       "max": 99,
+      "step": 1,
       "info": "Maximum number of products customer can select (up to 99)"
     },
     {
@@ -564,18 +573,65 @@ document.addEventListener('DOMContentLoaded', () => {
   gap: 15px;
 }
 
-.bundle-size-input {
-  width: 80px;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
+.bundle-size-slider-container {
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 10px;
+}
+
+.bundle-size-slider {
+  width: 100%;
+  height: 8px;
+  -webkit-appearance: none;
+  background: #ddd;
+  outline: none;
   border-radius: 4px;
-  font-size: 1em;
+  margin: 10px 0;
+}
+
+.bundle-size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #007c89;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.bundle-size-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #007c89;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.bundle-size-slider::-webkit-slider-thumb:hover {
+  background: #006570;
+}
+
+.bundle-size-slider::-moz-range-thumb:hover {
+  background: #006570;
+}
+
+.bundle-size-value {
   text-align: center;
+  font-size: 1.1em;
+  font-weight: 500;
+  margin-top: 5px;
 }
 
 .bundle-size-hint {
+  display: flex;
+  justify-content: space-between;
   color: #666;
   font-size: 0.9em;
+  max-width: 400px;
+  padding: 0 10px;
 }
 
 .bundle-boxes-section,
