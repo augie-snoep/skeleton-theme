@@ -7,9 +7,30 @@
 
 {%- assign product_form_id = 'product-form-' | append: section.id -%}
 
+{%- assign bundle_products = product.metafields.design.your_own.references -%}
+{%- assign products_data = '' -%}
+{%- for ref_product in bundle_products -%}
+  {%- assign variant = ref_product.variants.first -%}
+  {%- assign product_data = '{' -%}
+  {%- assign product_data = product_data | append: '"id":' | append: ref_product.id -%}
+  {%- assign product_data = product_data | append: ',"handle":"' | append: ref_product.handle | append: '"' -%}
+  {%- assign product_data = product_data | append: ',"title":"' | append: ref_product.title | escape | append: '"' -%}
+  {%- assign product_data = product_data | append: ',"variantId":' | append: variant.id -%}
+  {%- assign product_data = product_data | append: ',"price":' | append: variant.price -%}
+  {%- assign product_data = product_data | append: ',"available":' | append: variant.available -%}
+  {%- assign product_data = product_data | append: ',"image":"' | append: ref_product.featured_image | image_url: width: 100 | append: '"' -%}
+  {%- assign product_data = product_data | append: ',"imageHigh":"' | append: ref_product.featured_image | image_url: width: 500 | append: '"' -%}
+  {%- assign product_data = product_data | append: '}' -%}
+  {%- if forloop.first -%}
+    {%- assign products_data = product_data -%}
+  {%- else -%}
+    {%- assign products_data = products_data | append: ',' | append: product_data -%}
+  {%- endif -%}
+{%- endfor -%}
+
 <div class="bundle-product-form" 
   data-product-handle="{{ product.handle }}"
-  data-bundle-products="{{ product.metafields.design.your_own.value | map: 'handle' | join: ',' | escape }}"
+  data-bundle-products="[{{ products_data }}]"
 >
   {%- form 'product', product, id: product_form_id, class: 'form', novalidate: 'novalidate', data-type: 'add-to-cart-form' -%}
     <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
@@ -28,6 +49,9 @@
       <div class="bundle-options" data-bundle-options>
         <!-- Options will be populated here -->
       </div>
+      <button type="button" class="load-more-options" style="display: none;">
+        Load More Options
+      </button>
     </div>
 
     <div class="bundle-summary">
@@ -120,7 +144,7 @@ class BundleProduct {
 
   async loadAvailableOptions() {
     try {
-      // Get product handles from the data attribute
+      // Get preloaded product data from the data attribute
       const bundleProductsStr = this.container.dataset.bundleProducts;
       
       if (!bundleProductsStr) {
@@ -128,41 +152,41 @@ class BundleProduct {
         return [];
       }
 
-      // Split the comma-separated handles
-      const productHandles = bundleProductsStr.split(',');
-
-      // Load data for each product handle
-      const productPromises = productHandles.map(async (handle) => {
-        try {
-          const response = await fetch(`/products/${handle}.js`);
-          const productData = await response.json();
-          
-          // Get the first available variant or the selected variant
-          const variant = productData.variants.find(v => v.available) || productData.variants[0];
-          
-          return {
-            id: productData.id,
-            variantId: variant.id,
-            title: productData.title,
-            price: variant.price,
-            image: productData.featured_image || productData.images[0],
-            available: variant.available,
-            handle: productData.handle
-          };
-        } catch (error) {
-          console.error(`Error loading product ${handle}:`, error);
-          return null;
-        }
-      });
-
-      // Wait for all product data to load
-      const products = await Promise.all(productPromises);
+      // Parse the JSON data
+      this.allProducts = JSON.parse(bundleProductsStr);
       
-      // Filter out any failed loads (null values)
-      return products.filter(product => product !== null);
+      // Initialize pagination
+      this.currentPage = 0;
+      this.productsPerPage = 12;
+      
+      // Return first page of products
+      return this.getProductsForCurrentPage();
     } catch (error) {
       console.error('Error loading available products:', error);
       return [];
+    }
+  }
+
+  getProductsForCurrentPage() {
+    const start = this.currentPage * this.productsPerPage;
+    return this.allProducts.slice(start, start + this.productsPerPage);
+  }
+
+  loadMoreProducts() {
+    if ((this.currentPage + 1) * this.productsPerPage < this.allProducts.length) {
+      this.currentPage++;
+      this.availableOptions = [...this.availableOptions, ...this.getProductsForCurrentPage()];
+      this.renderOptions();
+      this.updateLoadMoreButton();
+    }
+  }
+
+  updateLoadMoreButton() {
+    const hasMoreProducts = (this.currentPage + 1) * this.productsPerPage < this.allProducts.length;
+    const loadMoreBtn = this.container.querySelector('.load-more-options');
+    
+    if (loadMoreBtn) {
+      loadMoreBtn.style.display = hasMoreProducts ? 'block' : 'none';
     }
   }
 
@@ -192,6 +216,15 @@ class BundleProduct {
     this.quantityInput.addEventListener('change', () => {
       this.updateTotalPrice();
     });
+
+    // Handle load more button
+    const loadMoreBtn = this.container.querySelector('.load-more-options');
+    if (loadMoreBtn) {
+      loadMoreBtn.addEventListener('click', () => this.loadMoreProducts());
+    }
+
+    // Setup lazy loading for images
+    this.setupImageLazyLoading();
   }
 
   addToNextEmptyBox(optionId) {
@@ -291,13 +324,40 @@ class BundleProduct {
     `).join('');
   }
 
+  setupImageLazyLoading() {
+    // Use Intersection Observer to lazy load images
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const img = entry.target;
+          const highResSrc = img.dataset.highRes;
+          if (highResSrc) {
+            img.src = highResSrc;
+            img.removeAttribute('data-high-res');
+            observer.unobserve(img);
+          }
+        }
+      });
+    }, {
+      rootMargin: '50px 0px',
+      threshold: 0.1
+    });
+
+    // Observe all option images
+    this.container.querySelectorAll('.option-image[data-high-res]').forEach(img => {
+      observer.observe(img);
+    });
+  }
+
   renderOptions() {
     this.bundleOptionsContainer.innerHTML = this.availableOptions.map(option => `
       <div class="bundle-option ${option.available ? 'available' : 'unavailable'}" data-option-id="${option.id}">
         <img 
           class="option-image" 
           src="${option.image}"
+          data-high-res="${option.imageHigh}"
           alt="${option.title}"
+          loading="lazy"
         >
         <div class="option-details">
           <div class="option-title">${option.title}</div>
@@ -306,6 +366,12 @@ class BundleProduct {
         ${!option.available ? '<div class="unavailable-overlay">Sold Out</div>' : ''}
       </div>
     `).join('');
+
+    // Setup lazy loading for the newly added images
+    this.setupImageLazyLoading();
+    
+    // Update load more button visibility
+    this.updateLoadMoreButton();
   }
 
   render() {
@@ -650,6 +716,27 @@ document.addEventListener('DOMContentLoaded', () => {
 .bundle-add-button:disabled {
   background: #ccc;
   cursor: not-allowed;
+}
+
+/* Load more button styles */
+.load-more-options {
+  display: block;
+  width: 100%;
+  max-width: 200px;
+  margin: 20px auto;
+  padding: 10px 20px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9em;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.load-more-options:hover {
+  background: #e5e5e5;
+  border-color: #ccc;
 }
 
 /* Responsive design */
