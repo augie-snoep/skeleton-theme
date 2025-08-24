@@ -27,7 +27,13 @@
       "name": "Design your own",
       "settings": {
         "bundle_size": 10,
-        "bundle_products": []
+        "bundle_products": [
+          "byo-element-1-5-seat-no-arms",
+          "byo-element-arm-left",
+          "byo-element-arm-right",
+          "80s-flowers-rechthoek",
+          "80s-flowers-sample"
+        ]
       }
     }
   },
