@@ -798,8 +798,14 @@ width: 500 | append: '"' -%}
     }
 
     setupEventListeners() {
-      // Add item button
+      // Add item button and empty slots
       this.addBtn.addEventListener('click', () => this.openSelector());
+      this.selectedItemsContainer.addEventListener('click', (e) => {
+        const emptySlot = e.target.closest('.empty-slot');
+        if (emptySlot) {
+          this.openSelector();
+        }
+      });
 
       // Selector close
       this.closeSelectorBtn.addEventListener('click', () => this.closeSelector());
@@ -1119,11 +1125,24 @@ width: 500 | append: '"' -%}
     background: #fafafa !important;
     cursor: pointer;
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
   }
 
   .empty-slot:hover {
-    border-color: #9ca3af;
-    background: #f5f5f5 !important;
+    border-color: #3b82f6 !important;
+    background: #f8faff !important;
+    transform: translateY(-2px);
+  }
+
+  .empty-slot:hover .placeholder-icon {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    transform: scale(1.1);
+  }
+
+  .empty-slot:hover .placeholder-text {
+    color: #3b82f6;
   }
 
   .empty-placeholder {
@@ -1134,24 +1153,28 @@ width: 500 | append: '"' -%}
     height: 100%;
     min-height: 120px;
     color: #6b7280;
+    padding: 1.5rem;
   }
 
   .placeholder-icon {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     border: 2px solid currentColor;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 300;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+    transition: all 0.3s ease;
   }
 
   .placeholder-text {
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     font-weight: 500;
+    text-align: center;
+    transition: color 0.3s ease;
   }
 
   /* Filled slot specific styles */
