@@ -223,19 +223,24 @@ class BundleProduct {
         },
         body: JSON.stringify({
           items: bundleItems.map(item => ({
-            id: item.variantId.split('/').pop(), // Extract the numeric ID
+            id: parseInt(item.variantId), // Make sure this is a number
             quantity: item.quantity * quantity,
-            attributes: [{
-              key: "_time",
-              value: bundleId
-            }]
+            properties: {
+              '_time': bundleId,
+              '_bundle': 'true'
+            }
           }))
         })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to add bundle to cart');
+        const errorData = await response.json();
+        console.error('Cart add error:', errorData);
+        throw new Error(errorData.message || 'Failed to add bundle to cart');
       }
+
+      const result = await response.json();
+      console.log('Bundle added successfully:', result);
 
       // Handle successful addition (you can customize this)
       window.location.href = '/cart';
