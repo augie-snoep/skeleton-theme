@@ -116,20 +116,48 @@ class BundleProduct {
   }
 
   async loadAvailableOptions() {
-    // Get available options from the data attribute or use fallback
-    const availableProducts = this.container.dataset.availableProducts;
-    
-    if (availableProducts) {
-      try {
-        return JSON.parse(availableProducts);
-      } catch (error) {
-        console.error('Error parsing available products:', error);
+    try {
+      // Get the product references from the metafield
+      const metafieldValue = {{ product.metafields.design.your_own | json }};
+      
+      if (!metafieldValue) {
+        console.warn('No products configured in design.your_own metafield');
+        return [];
       }
-    }
 
-    // Fallback: Load some sample products or return empty array
-    console.warn('No available products configured');
-    return [];
+      // Load data for each referenced product
+      const productPromises = metafieldValue.references.map(async (referencedProduct) => {
+        try {
+          const response = await fetch(`/products/${referencedProduct.handle}.js`);
+          const productData = await response.json();
+          
+          // Get the first available variant or the selected variant
+          const variant = productData.variants.find(v => v.available) || productData.variants[0];
+          
+          return {
+            id: productData.id,
+            variantId: variant.id,
+            title: productData.title,
+            price: variant.price,
+            image: productData.featured_image || productData.images[0],
+            available: variant.available,
+            handle: productData.handle
+          };
+        } catch (error) {
+          console.error(`Error loading product ${referencedProduct.handle}:`, error);
+          return null;
+        }
+      });
+
+      // Wait for all product data to load
+      const products = await Promise.all(productPromises);
+      
+      // Filter out any failed loads (null values)
+      return products.filter(product => product !== null);
+    } catch (error) {
+      console.error('Error loading available products:', error);
+      return [];
+    }
   }
 
   setupEventListeners() {
