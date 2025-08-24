@@ -24,6 +24,7 @@
     },
     "design_your_own_UURVQt": {
       "type": "design-your-own",
+      "disabled": true,
       "name": "Design your own",
       "settings": {
         "bundle_size": 10,
@@ -35,11 +36,21 @@
           "80s-flowers-sample"
         ]
       }
+    },
+    "dyo_custom_bpRbEf": {
+      "type": "dyo-custom",
+      "name": "DYO - custom",
+      "settings": {
+        "min_bundle_size": 3,
+        "max_bundle_size": 66,
+        "bundle_products": []
+      }
     }
   },
   "order": [
     "main",
     "main_product_bundle_pag7Kd",
-    "design_your_own_UURVQt"
+    "design_your_own_UURVQt",
+    "dyo_custom_bpRbEf"
   ]
 }
