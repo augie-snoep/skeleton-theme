@@ -51,8 +51,8 @@
       "type": "dyo-modern",
       "name": "DYO - modern",
       "settings": {
-        "min_bundle_size": 3,
-        "max_bundle_size": 49,
+        "min_bundle_size": 1,
+        "max_bundle_size": 99,
         "bundle_products": []
       }
     }
