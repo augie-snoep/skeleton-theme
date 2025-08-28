@@ -9,30 +9,34 @@ A modern, step-by-step bundle product form with smooth UX
 
 {%- assign bundle_products = product.metafields.design.your_own.value -%}
 <script type="application/json" id="bundle-products-{{ section.id }}">
-{%- for ref_product in bundle_products -%}
-  {%- if forloop.first != true -%},{%- endif -%}
-  {
-    "id": {{ ref_product.id | json }},
-    "handle": {{ ref_product.handle | json }},
-    "title": {{ ref_product.title | json }},
-    "hasVariants": {% if ref_product.variants.size > 1 %}true{% else %}false{% endif %},
-    "image": {{ ref_product.featured_image | image_url: width: 100 | json }},
-    "imageHigh": {{ ref_product.featured_image | image_url: width: 500 | json }},
-    "variants": [
-      {%- for variant in ref_product.variants -%}
-        {%- if forloop.first != true -%},{%- endif -%}
-        {
-          "id": {{ variant.id | json }},
-          "title": {{ variant.title | json }},
-          "price": {{ variant.price | json }},
-          "available": {{ variant.available | json }},
-          "image": {{ variant.featured_image | default: ref_product.featured_image | image_url: width: 100 | json }},
-          "imageHigh": {{ variant.featured_image | default: ref_product.featured_image | image_url: width: 500 | json }}
-        }
-      {%- endfor -%}
-    ]
-  }
-{%- endfor -%}
+{
+  "products": [
+    {%- for ref_product in bundle_products -%}
+      {%- if forloop.first != true -%},{%- endif -%}
+      {
+        "id": {{ ref_product.id | json }},
+        "handle": {{ ref_product.handle | json }},
+        "title": {{ ref_product.title | json }},
+        "hasVariants": {% if ref_product.variants.size > 1 %}true{% else %}false{% endif %},
+        "image": {% if ref_product.featured_image %}{{ ref_product.featured_image | image_url: width: 100 | json }}{% else %}""{% endif %},
+        "imageHigh": {% if ref_product.featured_image %}{{ ref_product.featured_image | image_url: width: 500 | json }}{% else %}""{% endif %},
+        "variants": [
+          {%- for variant in ref_product.variants -%}
+            {%- if forloop.first != true -%},{%- endif -%}
+            {
+              "id": {{ variant.id | json }},
+              "title": {{ variant.title | json }},
+              "price": {{ variant.price | json }},
+              "available": {{ variant.available | json }},
+              "image": {% if variant.featured_image %}{{ variant.featured_image | image_url: width: 100 | json }}{% elsif ref_product.featured_image %}{{ ref_product.featured_image | image_url: width: 100 | json }}{% else %}""{% endif %},
+              "imageHigh": {% if variant.featured_image %}{{ variant.featured_image | image_url: width: 500 | json }}{% elsif ref_product.featured_image %}{{ ref_product.featured_image | image_url: width: 500 | json }}{% else %}""{% endif %}
+            }
+          {%- endfor -%}
+        ]
+      }
+    {%- endfor -%}
+  ]
+}
 </script>
 
 <div class="modern-bundle-form" data-product-handle="{{ product.handle }}" data-bundle-products-id="bundle-products-{{ section.id }}"
@@ -1093,7 +1097,8 @@ A modern, step-by-step bundle product form with smooth UX
         const scriptElement = document.getElementById(bundleProductsId);
         if (!scriptElement) return;
 
-        this.allProducts = JSON.parse(`[${scriptElement.textContent}]`);
+        const data = JSON.parse(scriptElement.textContent);
+        this.allProducts = data.products || [];
         this.filteredProducts = [...this.allProducts];
       } catch (error) {
         console.error('Error loading products:', error);
