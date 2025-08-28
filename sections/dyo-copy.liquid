@@ -809,6 +809,20 @@ A modern, step-by-step bundle product form with smooth UX
     gap: 0.25rem;
   }
 
+  .variants-badge {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(4px);
+  }
+
   .selector-item.unavailable {
     opacity: 0.7;
     cursor: not-allowed;
@@ -1227,18 +1241,24 @@ A modern, step-by-step bundle product form with smooth UX
         .filter(item => item !== null)
         .map(item => item.variantId);
 
-      const productsHtml = products.map(product => `
-        <div class="selector-item ${!product.available ? 'unavailable' : ''} ${selectedVariantIds.includes(product.variantId) ? 'selected' : ''}" 
-             data-product-id="${product.variantId}">
-          <div class="image-container">
-            <img src="${product.imageHigh || product.image}" alt="${product.title}" loading="lazy">
+      const productsHtml = products.map(product => {
+        const hasAvailableVariants = product.variants.some(v => v.available);
+        const firstAvailableVariant = product.variants.find(v => v.available) || product.variants[0];
+        
+        return `
+          <div class="selector-item ${!hasAvailableVariants ? 'unavailable' : ''} ${selectedVariantIds.includes(firstAvailableVariant.id) ? 'selected' : ''}" 
+               data-product-id="${product.id}">
+            <div class="image-container">
+              <img src="${product.imageHigh || product.image}" alt="${product.title}" loading="lazy">
+            </div>
+            <h4>${product.title}</h4>
+            <div class="price">${this.formatMoney(firstAvailableVariant.price)}</div>
+            ${!hasAvailableVariants ? '<div class="unavailable-badge">Sold Out</div>' : ''}
+            ${selectedVariantIds.includes(firstAvailableVariant.id) ? '<div class="selected-badge">✓ Selected</div>' : ''}
+            ${product.hasVariants ? '<div class="variants-badge">Multiple Options</div>' : ''}
           </div>
-          <h4>${product.title}</h4>
-          <div class="price">${this.formatMoney(product.price)}</div>
-          ${!product.available ? '<div class="unavailable-badge">Sold Out</div>' : ''}
-          ${selectedVariantIds.includes(product.variantId) ? '<div class="selected-badge">✓ Selected</div>' : ''}
-        </div>
-      `).join('');
+        `;
+      }).join('');
 
       if (append) {
         this.selectorGrid.insertAdjacentHTML('beforeend', productsHtml);
@@ -1554,10 +1574,18 @@ A modern, step-by-step bundle product form with smooth UX
   }
 
   // Initialize when DOM is ready
-  document.addEventListener('DOMContentLoaded', () => {
-    const bundleForms = document.querySelectorAll('.modern-bundle-form');
-    bundleForms.forEach(form => new ModernBundleForm(form));
-  });
+  class BundleFormManager {
+    static init() {
+      const bundleForms = document.querySelectorAll('.modern-bundle-form');
+      bundleForms.forEach(form => new ModernBundleForm(form));
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', BundleFormManager.init);
+  } else {
+    BundleFormManager.init();
+  }
 
   // Add empty slot styling
 </script>
