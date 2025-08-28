@@ -1062,34 +1062,58 @@ A modern, step-by-step bundle product form with smooth UX
 <script>
   class ModernBundleForm {
     constructor(container) {
+      if (!container) throw new Error('Container element is required');
+      
       this.container = container;
       this.productHandle = container.dataset.productHandle;
       this.minSize = parseInt(container.dataset.minSize);
       this.maxSize = parseInt(container.dataset.maxSize);
 
-      this.form = container.querySelector('.bundle-form');
-      this.selectedItemsContainer = container.querySelector('[data-selected-items]');
-      this.addBtn = container.querySelector('[data-add-btn]');
-      this.selector = container.querySelector('[data-selector]');
-      this.selectorGrid = container.querySelector('[data-selector-grid]');
-      this.closeSelectorBtn = container.querySelector('[data-close-selector]');
-      this.loadMoreBtn = container.querySelector('[data-load-more]');
-      this.totalElement = container.querySelector('[data-total]');
-      this.countElement = container.querySelector('[data-count]');
-      this.quantityInput = container.querySelector('[data-quantity]');
-      this.qtyDecrease = container.querySelector('[data-qty-decrease]');
-      this.qtyIncrease = container.querySelector('[data-qty-increase]');
-      this.submitBtn = container.querySelector('[data-submit]');
-      this.submitText = container.querySelector('[data-submit-text]');
-      this.bundleConfig = container.querySelector('[data-bundle-config]');
+      // Initialize all DOM elements
+      this.initializeElements();
 
+      // Initialize state
       this.selectedItems = [];
       this.allProducts = [];
       this.filteredProducts = [];
       this.currentPage = 0;
-      this.productsPerPage = 24; // Show more products initially
+      this.productsPerPage = 24;
 
       this.init();
+    }
+
+    initializeElements() {
+      // Main elements
+      this.form = this.container.querySelector('.bundle-form');
+      this.selectedItemsContainer = this.container.querySelector('[data-selected-items]');
+      this.addBtn = this.container.querySelector('[data-add-btn]');
+      
+      // Product selector elements
+      this.selector = this.container.querySelector('[data-selector]');
+      this.selectorGrid = this.container.querySelector('[data-selector-grid]');
+      this.closeSelectorBtn = this.container.querySelector('[data-close-selector]');
+      this.loadMoreBtn = this.container.querySelector('[data-load-more]');
+      
+      // Variant selector elements
+      this.variantSelector = this.container.querySelector('[data-variant-selector]');
+      this.variantSelectorContent = this.container.querySelector('.variant-selector-content');
+      this.closeVariantBtn = this.container.querySelector('[data-close-variant-selector]');
+      this.addVariantBtn = this.container.querySelector('[data-add-variant]');
+      this.variantImage = this.container.querySelector('[data-variant-image]');
+      this.variantProductTitle = this.container.querySelector('[data-variant-product-title]');
+      this.variantOptions = this.container.querySelector('[data-variant-options]');
+      
+      // Counter and price elements
+      this.totalElement = this.container.querySelector('[data-total]');
+      this.countElement = this.container.querySelector('[data-count]');
+      this.quantityInput = this.container.querySelector('[data-quantity]');
+      this.qtyDecrease = this.container.querySelector('[data-qty-decrease]');
+      this.qtyIncrease = this.container.querySelector('[data-qty-increase]');
+      
+      // Submit elements
+      this.submitBtn = this.container.querySelector('[data-submit]');
+      this.submitText = this.container.querySelector('[data-submit-text]');
+      this.bundleConfig = this.container.querySelector('[data-bundle-config]');
     }
 
     async init() {
@@ -1479,9 +1503,16 @@ A modern, step-by-step bundle product form with smooth UX
     }
 
     openVariantSelector(product) {
+      if (!product || !this.variantSelector) return;
+
       // Update variant selector content
-      this.variantImage.src = product.imageHigh;
-      this.variantImage.alt = product.title;
+      if (product.imageHigh) {
+        this.variantImage.src = product.imageHigh;
+        this.variantImage.alt = product.title;
+      } else {
+        this.variantImage.style.display = 'none';
+      }
+      
       this.variantProductTitle.textContent = product.title;
 
       // Create variant options
@@ -1489,8 +1520,8 @@ A modern, step-by-step bundle product form with smooth UX
         <div class="variant-option ${!variant.available ? 'unavailable' : ''}" 
              data-variant-id="${variant.id}">
           <div class="variant-option-content">
-            ${variant.featured_image ? `
-              <img src="${variant.image}" alt="${variant.title}" class="variant-option-image">
+            ${variant.image ? `
+              <img src="${variant.image}" alt="${variant.title}" class="variant-option-image" width="50" height="50">
             ` : ''}
             <div class="variant-option-details">
               <span class="variant-title">${variant.title}</span>
@@ -1522,8 +1553,9 @@ A modern, step-by-step bundle product form with smooth UX
       });
 
       // Show variant selector
+      this.variantSelector.style.display = 'flex';
       this.variantSelector.removeAttribute('hidden');
-      setTimeout(() => this.variantSelector.classList.add('show'), 10);
+      requestAnimationFrame(() => this.variantSelector.classList.add('show'));
     }
 
     closeVariantSelector() {
