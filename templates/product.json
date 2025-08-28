@@ -62,7 +62,7 @@
       "name": "DYO - copy",
       "settings": {
         "min_bundle_size": 3,
-        "max_bundle_size": 10,
+        "max_bundle_size": 98,
         "bundle_products": []
       }
     }
