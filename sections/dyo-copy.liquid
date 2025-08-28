@@ -1477,23 +1477,27 @@ A modern, step-by-step bundle product form with smooth UX
       this.submitBtn.querySelector('.btn-loader').hidden = false;
 
       try {
-        const quantity = parseInt(this.quantityInput.value);
+        const quantity = parseInt(this.quantityInput.value) || 1;
         const bundleId = Date.now().toString();
 
         const bundleItems = filledItems.map(item => ({
-          id: parseInt(item.variantId),
+          id: item.id,
           quantity: quantity,
           properties: {
             '_time': bundleId,
-            '_bundle': 'true'
+            '_bundle': 'true',
+            '_product': item.productTitle || '',
+            '_variant': item.title || ''
           }
         }));
 
         // Update bundle config
         this.bundleConfig.value = JSON.stringify(filledItems.map(item => ({
-          variantId: item.variantId.toString(),
-          quantity: 1,
-          price: item.price / 100
+          id: item.id,
+          title: item.title,
+          productTitle: item.productTitle,
+          quantity: quantity,
+          price: item.price
         })));
 
         const response = await fetch('/cart/add.js', {
