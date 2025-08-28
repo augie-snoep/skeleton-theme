@@ -1165,43 +1165,76 @@ A modern, step-by-step bundle product form with smooth UX
       this.loadMoreBtn.addEventListener('click', () => this.loadMore());
 
       // Product selection and deselection
-      this.selectorGrid.addEventListener('click', (e) => {
+      this.selectorGrid?.addEventListener('click', (e) => {
         const item = e.target.closest('.selector-item');
-        if (item && !item.classList.contains('unavailable')) {
-          const productId = parseInt(item.dataset.productId);
-          const product = this.allProducts.find(p => p.id === productId);
-          
-          if (item.classList.contains('selected')) {
-            this.deselectProduct(productId);
-          } else if (product.hasVariants) {
-            this.openVariantSelector(product);
-          } else {
-            // For products without variants, use the first variant
-            this.selectProduct(product.variants[0].id);
+        if (!item || item.classList.contains('unavailable')) return;
+
+        const productId = parseInt(item.dataset.productId);
+        const product = this.allProducts.find(p => p.id === productId);
+        if (!product) return;
+        
+        if (item.classList.contains('selected')) {
+          const variant = product.variants.find(v => 
+            this.selectedItems.some(item => item && item.id === v.id)
+          );
+          if (variant) {
+            this.deselectProduct(variant.id);
+          }
+        } else if (product.hasVariants) {
+          this.openVariantSelector(product);
+        } else {
+          // For products without variants, use the first available variant
+          const firstAvailableVariant = product.variants.find(v => v.available);
+          if (firstAvailableVariant) {
+            const emptyIndex = this.selectedItems.findIndex(item => item === null);
+            if (emptyIndex !== -1) {
+              this.selectedItems[emptyIndex] = { ...firstAvailableVariant, productTitle: product.title };
+            } else if (this.selectedItems.length < this.maxSize) {
+              this.selectedItems.push({ ...firstAvailableVariant, productTitle: product.title });
+            }
+            this.updateDisplay();
+            this.updateSelectorHighlights();
           }
         }
       });
 
-      // Variant selector
-      this.variantSelector = container.querySelector('[data-variant-selector]');
-      this.variantSelectorContent = this.variantSelector.querySelector('.variant-selector-content');
-      this.closeVariantBtn = container.querySelector('[data-close-variant-selector]');
-      this.addVariantBtn = container.querySelector('[data-add-variant]');
-      this.variantImage = container.querySelector('[data-variant-image]');
-      this.variantProductTitle = container.querySelector('[data-variant-product-title]');
-      this.variantOptions = container.querySelector('[data-variant-options]');
-
-      this.closeVariantBtn.addEventListener('click', () => this.closeVariantSelector());
-      this.variantSelector.addEventListener('click', (e) => {
-        if (e.target === this.variantSelector) this.closeVariantSelector();
+      // Variant selector events
+      this.closeVariantBtn?.addEventListener('click', () => {
+        this.closeVariantSelector();
+        this.closeSelector();
       });
 
-      this.addVariantBtn.addEventListener('click', () => {
-        const selectedVariantId = parseInt(this.addVariantBtn.dataset.variantId);
-        if (selectedVariantId) {
-          this.selectProduct(selectedVariantId);
+      this.variantSelector?.addEventListener('click', (e) => {
+        if (e.target === this.variantSelector) {
           this.closeVariantSelector();
+          this.closeSelector();
         }
+      });
+
+      this.addVariantBtn?.addEventListener('click', () => {
+        const selectedVariantId = parseInt(this.addVariantBtn.dataset.variantId);
+        if (!selectedVariantId) return;
+
+        const product = this.allProducts.find(p => 
+          p.variants.some(v => v.id === selectedVariantId)
+        );
+        
+        if (!product) return;
+
+        const variant = product.variants.find(v => v.id === selectedVariantId);
+        if (!variant || !variant.available) return;
+
+        // Find first empty slot or add new one
+        const emptyIndex = this.selectedItems.findIndex(item => item === null);
+        if (emptyIndex !== -1) {
+          this.selectedItems[emptyIndex] = { ...variant, productTitle: product.title };
+        } else if (this.selectedItems.length < this.maxSize) {
+          this.selectedItems.push({ ...variant, productTitle: product.title });
+        }
+
+        this.updateDisplay();
+        this.closeVariantSelector();
+        this.closeSelector();
       });
 
       // Remove items
@@ -1559,13 +1592,24 @@ A modern, step-by-step bundle product form with smooth UX
     }
 
     closeVariantSelector() {
+      if (!this.variantSelector) return;
+      
       this.variantSelector.classList.remove('show');
       setTimeout(() => {
         this.variantSelector.setAttribute('hidden', '');
+        this.variantSelector.style.display = 'none';
         // Reset state
-        this.addVariantBtn.disabled = true;
-        delete this.addVariantBtn.dataset.variantId;
-        this.variantOptions.innerHTML = '';
+        if (this.addVariantBtn) {
+          this.addVariantBtn.disabled = true;
+          delete this.addVariantBtn.dataset.variantId;
+        }
+        if (this.variantOptions) {
+          this.variantOptions.innerHTML = '';
+        }
+        if (this.variantImage) {
+          this.variantImage.style.display = '';
+          this.variantImage.src = '';
+        }
       }, 300);
     }
 
