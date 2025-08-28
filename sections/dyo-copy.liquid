@@ -8,42 +8,34 @@ A modern, step-by-step bundle product form with smooth UX
 {%- assign product_form_id = 'product-form-' | append: section.id -%}
 
 {%- assign bundle_products = product.metafields.design.your_own.value -%}
-{%- assign products_data = '' -%}
-{%- for ref_product in bundle_products -%}
-{%- assign variant = ref_product.variants.first -%}
-{%- assign product_data = '{' -%}
-{%- assign product_data = product_data | append: '"id":' | append: ref_product.id -%}
-{%- assign product_data = product_data | append: ',"handle":"' | append: ref_product.handle | append: '"' -%}
-{%- assign product_data = product_data | append: ',"title":"' | append: ref_product.title | escape | append: '"' -%}
-{%- assign product_data = product_data | append: ',"variants":[' -%}
-{%- for variant in ref_product.variants -%}
-  {%- if forloop.first != true -%},{%- endif -%}
-  {%- assign variant_data = '{' -%}
-  {%- assign variant_data = variant_data | append: '"id":' | append: variant.id -%}
-  {%- assign variant_data = variant_data | append: ',"title":"' | append: variant.title | escape | append: '"' -%}
-  {%- assign variant_data = variant_data | append: ',"price":' | append: variant.price -%}
-  {%- assign variant_data = variant_data | append: ',"available":' | append: variant.available -%}
-  {%- if variant.featured_image -%}
-    {%- assign variant_data = variant_data | append: ',"image":"' | append: variant.featured_image | image_url: width: 100 | append: '"' -%}
-    {%- assign variant_data = variant_data | append: ',"imageHigh":"' | append: variant.featured_image | image_url: width: 500 | append: '"' -%}
-  {%- else -%}
-    {%- assign variant_data = variant_data | append: ',"image":"' | append: ref_product.featured_image | image_url: width: 100 | append: '"' -%}
-    {%- assign variant_data = variant_data | append: ',"imageHigh":"' | append: ref_product.featured_image | image_url: width: 500 | append: '"' -%}
-  {%- endif -%}
-  {%- assign variant_data = variant_data | append: '}' -%}
-  {{ variant_data }}
-{%- endfor -%}
-{%- assign product_data = product_data | append: ']' -%}
-{%- assign product_data = product_data | append: ',"hasVariants":' | append: ref_product.variants.size | append: ' > 1' -%}
-{%- assign product_data = product_data | append: ',"image":"' | append: ref_product.featured_image | image_url: width: 100 | append: '"' -%}
-{%- assign product_data = product_data | append: ',"imageHigh":"' | append: ref_product.featured_image | image_url: width: 500 | append: '"' -%}
-{%- assign product_data = product_data | append: '}' -%}
-{%- if forloop.first -%}
-{%- assign products_data = product_data -%}
-{%- else -%}
-{%- assign products_data = products_data | append: ',' | append: product_data -%}
-{%- endif -%}
-{%- endfor -%}
+{%- capture products_data -%}
+[
+  {%- for ref_product in bundle_products -%}
+    {%- if forloop.first != true -%},{%- endif -%}
+    {
+      "id": {{ ref_product.id | json }},
+      "handle": {{ ref_product.handle | json }},
+      "title": {{ ref_product.title | json }},
+      "hasVariants": {% if ref_product.variants.size > 1 %}true{% else %}false{% endif %},
+      "image": {{ ref_product.featured_image | image_url: width: 100 | json }},
+      "imageHigh": {{ ref_product.featured_image | image_url: width: 500 | json }},
+      "variants": [
+        {%- for variant in ref_product.variants -%}
+          {%- if forloop.first != true -%},{%- endif -%}
+          {
+            "id": {{ variant.id | json }},
+            "title": {{ variant.title | json }},
+            "price": {{ variant.price | json }},
+            "available": {{ variant.available | json }},
+            "image": {{ variant.featured_image | default: ref_product.featured_image | image_url: width: 100 | json }},
+            "imageHigh": {{ variant.featured_image | default: ref_product.featured_image | image_url: width: 500 | json }}
+          }
+        {%- endfor -%}
+      ]
+    }
+  {%- endfor -%}
+]
+{%- endcapture -%}
 
 <div class="modern-bundle-form" data-product-handle="{{ product.handle }}" data-bundle-products="[{{ products_data }}]"
   data-min-size="{{ section.settings.min_bundle_size | default: 3 }}"
@@ -106,7 +98,7 @@ A modern, step-by-step bundle product form with smooth UX
           </button>
         </div>
         <div class="variant-product-info">
-          <img src="" alt="" class="variant-product-image" data-variant-image>
+          <img src="" alt="" class="variant-product-image" data-variant-image width="80" height="80">
           <div class="variant-product-details">
             <h5 data-variant-product-title></h5>
             <div class="variant-options" data-variant-options></div>
