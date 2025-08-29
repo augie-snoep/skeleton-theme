@@ -1221,11 +1221,23 @@ A modern, step-by-step bundle product form with smooth UX
           // For products without variants, use the first available variant
           const firstAvailableVariant = product.variants.find(v => v.available);
           if (firstAvailableVariant) {
+            // If this is the only variant or it's the default variant, just use the product title
+            const isDefaultVariant = product.variants.length === 1 || firstAvailableVariant.title.toLowerCase().includes('default');
+            const displayTitle = isDefaultVariant ? product.title : `${product.title} - ${firstAvailableVariant.title}`;
+            
             const emptyIndex = this.selectedItems.findIndex(item => item === null);
             if (emptyIndex !== -1) {
-              this.selectedItems[emptyIndex] = { ...firstAvailableVariant, productTitle: product.title };
+              this.selectedItems[emptyIndex] = { 
+                ...firstAvailableVariant, 
+                productTitle: product.title,
+                displayTitle: displayTitle
+              };
             } else if (this.selectedItems.length < this.maxSize) {
-              this.selectedItems.push({ ...firstAvailableVariant, productTitle: product.title });
+              this.selectedItems.push({ 
+                ...firstAvailableVariant, 
+                productTitle: product.title,
+                displayTitle: displayTitle
+              });
             }
             this.updateDisplay();
             this.updateSelectorHighlights();
@@ -1256,15 +1268,27 @@ A modern, step-by-step bundle product form with smooth UX
         
         if (!product) return;
 
-        const variant = product.variants.find(v => v.id === selectedVariantId);
-        if (!variant || !variant.available) return;
+                  const variant = product.variants.find(v => v.id === selectedVariantId);
+          if (!variant || !variant.available) return;
 
-        // Find first empty slot or add new one
-        const emptyIndex = this.selectedItems.findIndex(item => item === null);
-        if (emptyIndex !== -1) {
-          this.selectedItems[emptyIndex] = { ...variant, productTitle: product.title };
-        } else if (this.selectedItems.length < this.maxSize) {
-          this.selectedItems.push({ ...variant, productTitle: product.title });
+          // If this is the only variant or it's the default variant, just use the product title
+          const isDefaultVariant = product.variants.length === 1 || variant.title.toLowerCase().includes('default');
+          const displayTitle = isDefaultVariant ? product.title : `${product.title} - ${variant.title}`;
+
+          // Find first empty slot or add new one
+          const emptyIndex = this.selectedItems.findIndex(item => item === null);
+          if (emptyIndex !== -1) {
+            this.selectedItems[emptyIndex] = { 
+              ...variant, 
+              productTitle: product.title,
+              displayTitle: displayTitle
+            };
+          } else if (this.selectedItems.length < this.maxSize) {
+            this.selectedItems.push({ 
+              ...variant, 
+              productTitle: product.title,
+              displayTitle: displayTitle
+            });
         }
 
         this.updateDisplay();
@@ -1452,7 +1476,7 @@ A modern, step-by-step bundle product form with smooth UX
           </button>
           <img src="${item.imageHigh}" alt="${item.title}" class="item-image">
           <div class="item-details">
-            <h4>${item.title}</h4>
+            <h4>${item.displayTitle || item.title}</h4>
             <div class="item-price">${this.formatMoney(item.price)}</div>
           </div>
         </div>
