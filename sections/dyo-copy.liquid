@@ -543,12 +543,23 @@ A modern, step-by-step bundle product form with smooth UX
     border-color: #3b82f6;
     background: #f0f7ff;
     position: relative;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
   }
 
   .selector-item.selected:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.2);
     background: #e5f0ff;
+  }
+
+  .selector-item.selected::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border: 2px solid #3b82f6;
+    border-radius: 12px;
+    pointer-events: none;
   }
 
   .selector-item.selected:hover::after {
@@ -1317,17 +1328,25 @@ A modern, step-by-step bundle product form with smooth UX
       const end = (this.currentPage + 1) * this.productsPerPage;
       const products = this.filteredProducts.slice(start, end);
 
-      // Get list of selected variant IDs
+      // Get list of selected variant IDs and product IDs
       const selectedVariantIds = this.selectedItems
         .filter(item => item !== null)
-        .map(item => item.variantId);
+        .map(item => item.id);
+      
+      const selectedProductIds = this.selectedItems
+        .filter(item => item !== null)
+        .map(item => {
+          const product = this.allProducts.find(p => 
+            p.variants.some(v => v.id === item.id)
+          );
+          return product ? product.id : null;
+        })
+        .filter(id => id !== null);
 
       const productsHtml = products.map(product => {
         const hasAvailableVariants = product.variants.some(v => v.available);
         const firstAvailableVariant = product.variants.find(v => v.available) || product.variants[0];
-        const isSelected = product.variants.some(variant => 
-          selectedVariantIds.includes(variant.id)
-        );
+        const isSelected = selectedProductIds.includes(product.id);
         
         return `
           <div class="selector-item ${!hasAvailableVariants ? 'unavailable' : ''} ${isSelected ? 'selected' : ''}" 
