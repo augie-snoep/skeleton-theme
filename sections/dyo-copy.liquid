@@ -1,4 +1,4 @@
-{% comment %}
+{% comment %} {% comment %}
 A modern, step-by-step bundle product form with smooth UX
 - Start with minimum items, add more with elegant buttons
 - Clean, minimalist design with smooth animations
@@ -1607,6 +1607,1985 @@ A modern, step-by-step bundle product form with smooth UX
     updateSelectorHighlights() {
       // Re-render the selector products to update highlights
       this.renderSelectorProducts();
+    }
+
+    openVariantSelector(product) {
+      if (!product || !this.variantSelector) return;
+
+      // Update variant selector content
+      if (product.imageHigh) {
+        this.variantImage.src = product.imageHigh;
+        this.variantImage.alt = product.title;
+      } else {
+        this.variantImage.style.display = 'none';
+      }
+      
+      this.variantProductTitle.textContent = product.title;
+
+      // Create variant options
+      const selectedVariantIds = this.selectedItems
+        .filter(item => item !== null)
+        .map(item => item.id);
+
+      const variantsHtml = product.variants.map(variant => {
+        const isSelected = selectedVariantIds.includes(variant.id);
+        return `
+          <div class="variant-option ${!variant.available ? 'unavailable' : ''} ${isSelected ? 'selected' : ''}" 
+               data-variant-id="${variant.id}">
+            <div class="variant-option-content">
+              ${variant.image ? `
+                <img src="${variant.image}" alt="${variant.title}" class="variant-option-image" width="50" height="50">
+              ` : ''}
+              <div class="variant-option-details">
+                <span class="variant-title">${variant.title}</span>
+                <span class="variant-price">${this.formatMoney(variant.price)}</span>
+              </div>
+            </div>
+            ${!variant.available ? '<div class="variant-unavailable">Sold Out</div>' : ''}
+            ${isSelected ? '<div class="variant-selected">✓ In Bundle</div>' : ''}
+          </div>
+        `;
+      }).join('');
+
+      this.variantOptions.innerHTML = variantsHtml;
+
+      // Add click handlers for variant options
+      this.variantOptions.querySelectorAll('.variant-option').forEach(option => {
+        if (!option.classList.contains('unavailable')) {
+          option.addEventListener('click', () => {
+            // Remove selected class from all options
+            this.variantOptions.querySelectorAll('.variant-option').forEach(opt => 
+              opt.classList.remove('selected'));
+            
+            // Add selected class to clicked option
+            option.classList.add('selected');
+            
+            // Enable add button and store variant ID
+            this.addVariantBtn.disabled = false;
+            this.addVariantBtn.dataset.variantId = option.dataset.variantId;
+          });
+        }
+      });
+
+      // Show variant selector
+      this.variantSelector.style.display = 'flex';
+      this.variantSelector.removeAttribute('hidden');
+      requestAnimationFrame(() => this.variantSelector.classList.add('show'));
+    }
+
+    closeVariantSelector() {
+      if (!this.variantSelector) return;
+      
+      this.variantSelector.classList.remove('show');
+      setTimeout(() => {
+        this.variantSelector.setAttribute('hidden', '');
+        this.variantSelector.style.display = 'none';
+        // Reset state
+        if (this.addVariantBtn) {
+          this.addVariantBtn.disabled = true;
+          delete this.addVariantBtn.dataset.variantId;
+        }
+        if (this.variantOptions) {
+          this.variantOptions.innerHTML = '';
+        }
+        if (this.variantImage) {
+          this.variantImage.style.display = '';
+          this.variantImage.src = '';
+        }
+      }, 300);
+    }
+
+    deselectProduct(variantId) {
+      // Don't allow deselection if it would put us below minimum size
+      const currentCount = this.getFilledCount();
+      if (currentCount <= this.minSize) {
+        // Show a gentle notification
+        const notification = document.createElement('div');
+        notification.className = 'deselect-notification';
+        notification.textContent = `Minimum ${this.minSize} items required`;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+          notification.classList.add('show');
+          setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 300);
+          }, 2000);
+        }, 10);
+        return;
+      }
+
+      // Find the index of the item with this variant ID
+      const index = this.selectedItems.findIndex(item => item && item.variantId === variantId);
+      if (index !== -1) {
+        // If this is the last slot, remove it entirely
+        if (index === this.selectedItems.length - 1) {
+          this.selectedItems.pop();
+        } else {
+          // Otherwise, set it to null to maintain the slot
+          this.selectedItems[index] = null;
+        }
+        this.updateDisplay();
+        this.updateSelectorHighlights();
+      }
+    }
+  }
+
+  // Initialize when DOM is ready
+  class BundleFormManager {
+    static init() {
+      const bundleForms = document.querySelectorAll('.modern-bundle-form');
+      bundleForms.forEach(form => new ModernBundleForm(form));
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', BundleFormManager.init);
+  } else {
+    BundleFormManager.init();
+  }
+
+  // Add empty slot styling
+</script>
+
+<style>
+  /* Additional styles for empty slots */
+  .empty-slot {
+    border: 2px dashed #d1d5db !important;
+    background: #fafafa !important;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .empty-slot:hover {
+    border-color: #3b82f6 !important;
+    background: #f8faff !important;
+    transform: translateY(-2px);
+  }
+
+  .empty-slot:hover .placeholder-icon {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    transform: scale(1.1);
+  }
+
+  .empty-slot:hover .placeholder-text {
+    color: #3b82f6;
+  }
+
+  .empty-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 120px;
+    color: #6b7280;
+    padding: 1.5rem;
+  }
+
+  .placeholder-icon {
+    width: 40px;
+    height: 40px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 300;
+    margin-bottom: 0.75rem;
+    transition: all 0.3s ease;
+  }
+
+  .placeholder-text {
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-align: center;
+    transition: color 0.3s ease;
+  }
+
+  /* Filled slot specific styles */
+  .filled-slot {
+    border: 2px solid #e5e7eb !important;
+    background: #fff !important;
+  }
+
+  /* Selector improvements */
+  .selector-item {
+    position: relative;
+  }
+
+  .unavailable-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-weight: 500;
+  }
+
+  /* Enhanced animations */
+  .selected-item {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .filled-slot {
+    animation: fillSlot 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  @keyframes fillSlot {
+    0% {
+      transform: scale(0.9);
+      opacity: 0;
+    }
+
+    50% {
+      transform: scale(1.02);
+    }
+
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* Improved mobile responsiveness */
+  @media (max-width: 640px) {
+    .modern-bundle-form {
+      padding: 0 1rem;
+    }
+
+    .bundle-header {
+      margin-bottom: 1.5rem;
+    }
+
+    .bundle-title h2 {
+      font-size: 1.5rem;
+    }
+
+    .selected-items {
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .add-item-btn {
+      min-height: 80px;
+      font-size: 0.9rem;
+    }
+
+    .add-icon {
+      width: 24px;
+      height: 24px;
+    }
+
+    .selector-header {
+      padding: 1rem 1.5rem;
+    }
+
+    .selector-search {
+      padding: 0.75rem 1.5rem;
+    }
+
+    .selector-grid {
+      padding: 1rem 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+
+    .load-more-btn {
+      margin: 0 1.5rem 1rem;
+    }
+  }
+</style> {% endcomment %}
+
+
+{% comment %}
+A modern, step-by-step bundle product form with smooth UX
+- Start with minimum items, add more with elegant buttons
+- Clean, minimalist design with smooth animations
+- Progressive disclosure instead of overwhelming options
+{% endcomment %}
+
+{%- assign product_form_id = 'product-form-' | append: section.id -%}
+
+{%- assign bundle_products = product.metafields.design.your_own.value -%}
+<script type="application/json" id="bundle-products-{{ section.id }}">
+{
+  "products": [
+    {%- for ref_product in bundle_products -%}
+      {%- if forloop.first != true -%},{%- endif -%}
+      {
+        "id": {{ ref_product.id | json }},
+        "handle": {{ ref_product.handle | json }},
+        "title": {{ ref_product.title | json }},
+        "hasVariants": {% if ref_product.variants.size > 1 %}true{% else %}false{% endif %},
+        "image": {% if ref_product.featured_image %}{{ ref_product.featured_image | image_url: width: 100 | json }}{% else %}""{% endif %},
+        "imageHigh": {% if ref_product.featured_image %}{{ ref_product.featured_image | image_url: width: 500 | json }}{% else %}""{% endif %},
+        "variants": [
+          {%- for variant in ref_product.variants -%}
+            {%- if forloop.first != true -%},{%- endif -%}
+            {
+              "id": {{ variant.id | json }},
+              "title": {{ variant.title | json }},
+              "price": {{ variant.price | json }},
+              "available": {{ variant.available | json }},
+              "image": {% if variant.featured_image %}{{ variant.featured_image | image_url: width: 100 | json }}{% elsif ref_product.featured_image %}{{ ref_product.featured_image | image_url: width: 100 | json }}{% else %}""{% endif %},
+              "imageHigh": {% if variant.featured_image %}{{ variant.featured_image | image_url: width: 500 | json }}{% elsif ref_product.featured_image %}{{ ref_product.featured_image | image_url: width: 500 | json }}{% else %}""{% endif %}
+            }
+          {%- endfor -%}
+        ]
+      }
+    {%- endfor -%}
+  ]
+}
+</script>
+
+<div class="modern-bundle-form" data-product-handle="{{ product.handle }}" data-bundle-products-id="bundle-products-{{ section.id }}"
+  data-min-size="{{ section.settings.min_bundle_size | default: 3 }}"
+  data-max-size="{{ section.settings.max_bundle_size | default: 10 }}">
+  {%- form 'product', product, id: product_form_id, class: 'bundle-form', novalidate: 'novalidate', data-type:
+  'add-to-cart-form' -%}
+  <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+
+  <!-- Header with dynamic pricing -->
+  <div class="bundle-header">
+    <div class="bundle-title">
+      <h2>Create Your Bundle</h2>
+      <p class="bundle-subtitle">Select your favorite items to build the perfect bundle</p>
+    </div>
+    <div class="bundle-price">
+      <span class="total-amount" data-total>$0.00</span>
+      <span class="items-count" data-count>0 items</span>
+    </div>
+  </div>
+
+  <!-- Selected Items Grid -->
+  <div class="selected-items" data-selected-items>
+    <!-- Items will be dynamically added here -->
+  </div>
+
+  <!-- Add Item Section -->
+  <div class="add-item-section" data-add-section>
+    <button type="button" class="add-item-btn" data-add-btn>
+      <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="16"></line>
+        <line x1="8" y1="12" x2="16" y2="12"></line>
+      </svg>
+      Add Item to Bundle
+    </button>
+  </div>
+
+  <!-- Product Selector Modal -->
+  <div class="product-selector" data-selector hidden>
+    <div class="selector-header">
+      <h3>Choose an Item</h3>
+      <button type="button" class="close-selector" data-close-selector>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Variant Selector Modal -->
+    <div class="variant-selector" data-variant-selector hidden>
+      <div class="variant-selector-content">
+        <div class="variant-header">
+          <h4>Select Variant</h4>
+          <button type="button" class="close-variant-selector" data-close-variant-selector>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="variant-product-info">
+          <img src="" alt="" class="variant-product-image" data-variant-image width="80" height="80">
+          <div class="variant-product-details">
+            <h5 data-variant-product-title></h5>
+            <div class="variant-options" data-variant-options></div>
+          </div>
+        </div>
+        <button type="button" class="add-variant-btn" data-add-variant disabled>
+          Add to Bundle
+        </button>
+      </div>
+    </div>
+
+    <div class="selector-grid" data-selector-grid>
+      <!-- Products will be loaded here -->
+    </div>
+    <button type="button" class="load-more-btn" data-load-more hidden>
+      Load More Items
+    </button>
+  </div>
+
+  <!-- Bundle Actions -->
+  <div class="bundle-actions">
+    <div class="quantity-section">
+      <label for="bundle-quantity">Bundle Quantity</label>
+      <div class="quantity-controls">
+        <button type="button" class="qty-btn" data-qty-decrease>-</button>
+        <input type="number" id="bundle-quantity" name="quantity" value="1" min="1" data-quantity readonly>
+        <button type="button" class="qty-btn" data-qty-increase>+</button>
+      </div>
+    </div>
+
+    <button type="submit" class="add-to-cart-btn" data-submit disabled>
+      <span data-submit-text>Add Bundle to Cart</span>
+      <div class="btn-loader" hidden>
+        <div class="spinner"></div>
+      </div>
+    </button>
+  </div>
+
+  <!-- Hidden Configuration -->
+  <input type="hidden" name="attributes[bundle_items]" data-bundle-config>
+  {%- endform -%}
+</div>
+
+{% schema %}
+{
+"name": "DYO - modern copy",
+"settings": [
+{
+"type": "range",
+"id": "min_bundle_size",
+"label": "Minimum Bundle Size",
+"default": 3,
+"min": 1,
+"max": 50,
+"step": 1,
+"info": "Minimum number of products customer must select"
+},
+{
+"type": "range",
+"id": "max_bundle_size",
+"label": "Maximum Bundle Size",
+"default": 10,
+"min": 2,
+"max": 99,
+"step": 1,
+"info": "Maximum number of products customer can select (up to 99)"
+},
+{
+"type": "product_list",
+"id": "bundle_products",
+"label": "Bundle Products",
+"info": "Select products that can be added to bundles"
+}
+],
+"presets": [
+{
+"name": "DYO - modern copy",
+"category": "Product"
+}
+]
+}
+{% endschema %}
+
+<style>
+  .modern-bundle-form {
+    max-width: 800px;
+    margin: 0 auto;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  /* Header */
+  .bundle-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .bundle-title h2 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .bundle-subtitle {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.95rem;
+  }
+
+  .bundle-price {
+    text-align: right;
+    min-width: 120px;
+  }
+
+  .total-amount {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 0.25rem;
+  }
+
+  .items-count {
+    font-size: 0.85rem;
+    color: #6b7280;
+  }
+
+  /* Selected Items */
+  .selected-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .selected-item {
+    position: relative;
+    background: #fff;
+    border: 2px solid #f0f0f0;
+    border-radius: 12px;
+    padding: 1rem;
+    transition: all 0.3s ease;
+    transform: scale(0.95);
+    opacity: 0;
+    animation: itemFadeIn 0.4s ease forwards;
+  }
+
+  @keyframes itemFadeIn {
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .selected-item:hover {
+    border-color: #e5e7eb;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  }
+
+  .item-image {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+  }
+
+  .item-details h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #1a1a1a;
+    line-height: 1.3;
+  }
+
+  .item-price {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-bottom: 0.75rem;
+  }
+
+  .item-quantity {
+    display: flex;
+    align-items: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    width: fit-content;
+    overflow: hidden;
+  }
+
+  .item-quantity .qty-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: #f9fafb;
+    color: #374151;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+  }
+
+  .item-quantity .qty-btn:hover {
+    background: #f3f4f6;
+    color: #111827;
+  }
+
+  .item-quantity input {
+    width: 32px;
+    height: 28px;
+    border: none;
+    border-left: 1px solid #e5e7eb;
+    border-right: 1px solid #e5e7eb;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #374151;
+    background: white;
+  }
+
+  .remove-item {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all 0.2s ease;
+    transform: scale(0.8);
+  }
+
+  .selected-item:hover .remove-item {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .remove-item:hover {
+    background: rgba(239, 68, 68, 0.2);
+  }
+
+  .remove-item svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* Add Item Section */
+  .add-item-section {
+    margin-bottom: 2rem;
+  }
+
+  .add-item-btn {
+    width: 100%;
+    min-height: 120px;
+    border: 2px dashed #d1d5db;
+    background: #fafafa;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #6b7280;
+  }
+
+  .add-item-btn:hover {
+    border-color: #9ca3af;
+    background: #f5f5f5;
+    color: #374151;
+    transform: translateY(-1px);
+  }
+
+  .add-icon {
+    width: 32px;
+    height: 32px;
+    stroke-width: 1.5;
+  }
+
+  /* Product Selector */
+  .product-selector {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .product-selector.show {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .product-selector>div:first-child {
+    background: #fff;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 800px;
+    max-height: 85vh;
+    overflow: hidden;
+    transform: translateY(20px);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+
+  .product-selector.show>div:first-child {
+    transform: translateY(0);
+  }
+
+  .selector-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.75rem 2rem;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .selector-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .close-selector {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: #f5f5f5;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .close-selector:hover {
+    background: #e5e5e5;
+    transform: rotate(90deg);
+  }
+
+  .close-selector:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+  }
+
+  .close-selector svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 1.5;
+  }
+
+  .selector-search {
+    padding: 1.25rem 2rem;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .selector-search-container {
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .selector-search input {
+    width: 100%;
+    padding: 1rem 1.25rem 1rem 3rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: #f9fafb;
+  }
+
+  .selector-search input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+  }
+
+  .selector-search::before {
+    content: '';
+    position: absolute;
+    left: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'%3E%3C/path%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    opacity: 0.6;
+  }
+
+  .selector-search input::placeholder {
+    color: #9ca3af;
+  }
+
+  .selector-grid {
+    padding: 1.5rem 2rem;
+    max-height: 75vh;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db transparent;
+  }
+
+  .selector-grid::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .selector-grid::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .selector-grid::-webkit-scrollbar-thumb {
+    background-color: #d1d5db;
+    border-radius: 4px;
+  }
+
+  .selector-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    min-height: 350px;
+  }
+
+  .selector-item:hover {
+    border-color: #3b82f6;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.1);
+  }
+
+  .selector-item.selected {
+    border-color: #3b82f6;
+    background: #f0f7ff;
+    position: relative;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  }
+
+  .selector-item.selected:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.2);
+    background: #e5f0ff;
+  }
+
+  .selector-item.selected::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border: 2px solid #3b82f6;
+    border-radius: 12px;
+    pointer-events: none;
+  }
+
+  .selector-item.selected:hover::after {
+    content: 'Click to Remove';
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(59, 130, 246, 0.9);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    animation: fadeIn 0.2s ease forwards;
+  }
+
+  @keyframes fadeIn {
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* Deselection notification */
+  .deselect-notification {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(100%);
+    background: #ef4444;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+    z-index: 1100;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .deselect-notification.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Variant Selector Styles */
+  .variant-selector {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .variant-selector.show {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .variant-selector-content {
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow: hidden;
+    transform: translateY(20px);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+
+  .variant-selector.show .variant-selector-content {
+    transform: translateY(0);
+  }
+
+  .variant-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .variant-header h4 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .close-variant-selector {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: #f5f5f5;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+  }
+
+  .close-variant-selector:hover {
+    background: #e5e5e5;
+    transform: rotate(90deg);
+  }
+
+  .close-variant-selector svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 1.5;
+  }
+
+  .variant-product-info {
+    padding: 1.25rem;
+    display: flex;
+    gap: 1rem;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .variant-product-image {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+
+  .variant-product-details h5 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #1a1a1a;
+  }
+
+  .variant-options {
+    padding: 1.25rem;
+    max-height: 400px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .variant-option {
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+  }
+
+  .variant-option:not(.unavailable):hover {
+    border-color: #3b82f6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+  }
+
+  .variant-option.selected {
+    border-color: #3b82f6;
+    background: #f0f7ff;
+  }
+
+  .variant-option.unavailable {
+    opacity: 0.7;
+    cursor: not-allowed;
+    background: #f9fafb;
+  }
+
+  .variant-option-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .variant-option-image {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 6px;
+  }
+
+  .variant-option-details {
+    flex: 1;
+  }
+
+  .variant-title {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #1a1a1a;
+    margin-bottom: 0.25rem;
+  }
+
+  .variant-price {
+    font-size: 0.9rem;
+    color: #2563eb;
+    font-weight: 600;
+  }
+
+  .variant-unavailable {
+    font-size: 0.8rem;
+    color: #ef4444;
+    font-weight: 500;
+    margin-top: 0.5rem;
+  }
+
+  .variant-selected {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: #3b82f6;
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  }
+
+  .variant-option.selected {
+    border-color: #3b82f6;
+    background: #f0f7ff;
+  }
+
+  .variant-option.selected:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .add-variant-btn {
+    width: calc(100% - 2.5rem);
+    margin: 0 1.25rem 1.25rem;
+    height: 48px;
+    border: none;
+    background: #3b82f6;
+    color: white;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .add-variant-btn:not(:disabled):hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  }
+
+  .add-variant-btn:disabled {
+    background: #d1d5db;
+    cursor: not-allowed;
+  }
+
+  .selected-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: #3b82f6;
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .variants-badge {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(4px);
+  }
+
+  .selector-item.unavailable {
+    opacity: 0.7;
+    cursor: not-allowed;
+    background: #f9fafb;
+  }
+
+  .selector-item.unavailable:hover {
+    transform: none;
+    border-color: #e5e7eb;
+    box-shadow: none;
+  }
+
+  .selector-item .image-container {
+    position: relative;
+    width: 100%;
+    padding-bottom: 100%;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f5f5f5;
+  }
+
+  .selector-item img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .selector-item:hover img {
+    transform: scale(1.08);
+  }
+
+  .selector-item h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: #1a1a1a;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .selector-item .price {
+    font-size: 1.1rem;
+    color: #2563eb;
+    font-weight: 600;
+  }
+
+  .unavailable-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(239, 68, 68, 0.95);
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+    z-index: 1;
+  }
+
+  .load-more-btn {
+    margin: 0.5rem 2rem 2rem;
+    padding: 1rem 2rem;
+    border: none;
+    background: #f3f4f6;
+    color: #1a1a1a;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 500;
+    width: calc(100% - 4rem);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+  }
+
+  .load-more-btn:hover {
+    background: #e5e7eb;
+    transform: translateY(-1px);
+  }
+
+  .load-more-btn:active {
+    transform: translateY(0);
+  }
+
+  /* Bundle Actions */
+  .bundle-actions {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-end;
+    padding-top: 2rem;
+    border-top: 1px solid #f0f0f0;
+  }
+
+  .quantity-section {
+    flex-shrink: 0;
+  }
+
+  .quantity-section label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #374151;
+  }
+
+  .quantity-controls {
+    display: flex;
+    align-items: center;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .qty-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: #f9fafb;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+  }
+
+  .qty-btn:hover {
+    background: #f3f4f6;
+  }
+
+  .quantity-controls input {
+    width: 50px;
+    height: 36px;
+    border: none;
+    text-align: center;
+    font-weight: 500;
+    background: #fff;
+  }
+
+  .add-to-cart-btn {
+    flex: 1;
+    height: 48px;
+    border: none;
+    background: #3b82f6;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .add-to-cart-btn:hover:not(:disabled) {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  }
+
+  .add-to-cart-btn:disabled {
+    background: #d1d5db;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn-loader {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .bundle-header {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .bundle-price {
+      text-align: left;
+    }
+
+    .selected-items {
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    .bundle-actions {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 1rem;
+    }
+
+    .product-selector {
+      padding: 1rem;
+    }
+
+    .selector-grid {
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+  }
+</style>
+
+<script>
+  class ModernBundleForm {
+    constructor(container) {
+      if (!container) throw new Error('Container element is required');
+      
+      this.container = container;
+      this.productHandle = container.dataset.productHandle;
+      this.minSize = parseInt(container.dataset.minSize);
+      this.maxSize = parseInt(container.dataset.maxSize);
+
+      // Initialize all DOM elements
+      this.initializeElements();
+
+      // Initialize state
+      this.selectedItems = [];
+      this.allProducts = [];
+      this.filteredProducts = [];
+      this.currentPage = 0;
+      this.productsPerPage = 24;
+
+      this.init();
+    }
+
+    initializeElements() {
+      // Main elements
+      this.form = this.container.querySelector('.bundle-form');
+      this.selectedItemsContainer = this.container.querySelector('[data-selected-items]');
+      this.addBtn = this.container.querySelector('[data-add-btn]');
+      
+      // Product selector elements
+      this.selector = this.container.querySelector('[data-selector]');
+      this.selectorGrid = this.container.querySelector('[data-selector-grid]');
+      this.closeSelectorBtn = this.container.querySelector('[data-close-selector]');
+      this.loadMoreBtn = this.container.querySelector('[data-load-more]');
+      
+      // Variant selector elements
+      this.variantSelector = this.container.querySelector('[data-variant-selector]');
+      this.variantSelectorContent = this.container.querySelector('.variant-selector-content');
+      this.closeVariantBtn = this.container.querySelector('[data-close-variant-selector]');
+      this.addVariantBtn = this.container.querySelector('[data-add-variant]');
+      this.variantImage = this.container.querySelector('[data-variant-image]');
+      this.variantProductTitle = this.container.querySelector('[data-variant-product-title]');
+      this.variantOptions = this.container.querySelector('[data-variant-options]');
+      
+      // Counter and price elements
+      this.totalElement = this.container.querySelector('[data-total]');
+      this.countElement = this.container.querySelector('[data-count]');
+      this.quantityInput = this.container.querySelector('[data-quantity]');
+      this.qtyDecrease = this.container.querySelector('[data-qty-decrease]');
+      this.qtyIncrease = this.container.querySelector('[data-qty-increase]');
+      
+      // Submit elements
+      this.submitBtn = this.container.querySelector('[data-submit]');
+      this.submitText = this.container.querySelector('[data-submit-text]');
+      this.bundleConfig = this.container.querySelector('[data-bundle-config]');
+    }
+
+    async init() {
+      await this.loadProducts();
+      this.setupEventListeners();
+      this.updateDisplay();
+
+      // Start with minimum items
+      for (let i = 0; i < this.minSize; i++) {
+        this.addEmptySlot();
+      }
+    }
+
+    async loadProducts() {
+      try {
+        const bundleProductsId = this.container.dataset.bundleProductsId;
+        if (!bundleProductsId) return;
+
+        const scriptElement = document.getElementById(bundleProductsId);
+        if (!scriptElement) return;
+
+        const data = JSON.parse(scriptElement.textContent);
+        this.allProducts = data.products || [];
+        this.filteredProducts = [...this.allProducts];
+      } catch (error) {
+        console.error('Error loading products:', error);
+      }
+    }
+
+    setupEventListeners() {
+      // Add item button and empty slots
+      this.addBtn.addEventListener('click', () => this.openSelector());
+      this.selectedItemsContainer.addEventListener('click', (e) => {
+        const emptySlot = e.target.closest('.empty-slot');
+        if (emptySlot) {
+          this.openSelector();
+        }
+      });
+
+      // Selector close
+      this.closeSelectorBtn.addEventListener('click', () => this.closeSelector());
+      this.selector.addEventListener('click', (e) => {
+        if (e.target === this.selector) this.closeSelector();
+      });
+
+
+
+      // Load more
+      this.loadMoreBtn.addEventListener('click', () => this.loadMore());
+
+      // Product selection and deselection
+      this.selectorGrid?.addEventListener('click', (e) => {
+        const item = e.target.closest('.selector-item');
+        if (!item || item.classList.contains('unavailable')) return;
+
+        const productId = parseInt(item.dataset.productId);
+        const product = this.allProducts.find(p => p.id === productId);
+        if (!product) return;
+        
+        if (item.classList.contains('selected')) {
+          const variant = product.variants.find(v => 
+            this.selectedItems.some(item => item && item.id === v.id)
+          );
+          if (variant) {
+            this.deselectProduct(variant.id);
+          }
+        } else if (product.hasVariants) {
+          this.openVariantSelector(product);
+        } else {
+          // For products without variants, use the first available variant
+          const firstAvailableVariant = product.variants.find(v => v.available);
+          if (firstAvailableVariant) {
+            // If this is the only variant or it's the default variant, just use the product title
+            const isDefaultVariant = product.variants.length === 1 || firstAvailableVariant.title.toLowerCase().includes('default');
+            const displayTitle = isDefaultVariant ? product.title : `${product.title} - ${firstAvailableVariant.title}`;
+            
+            const emptyIndex = this.selectedItems.findIndex(item => item === null);
+            if (emptyIndex !== -1) {
+              this.selectedItems[emptyIndex] = { 
+                ...firstAvailableVariant, 
+                productTitle: product.title,
+                displayTitle: displayTitle
+              };
+            } else if (this.selectedItems.length < this.maxSize) {
+              this.selectedItems.push({ 
+                ...firstAvailableVariant, 
+                productTitle: product.title,
+                displayTitle: displayTitle
+              });
+            }
+            this.updateDisplay();
+            this.updateSelectorHighlights();
+          }
+        }
+      });
+
+      // Variant selector events
+      this.closeVariantBtn?.addEventListener('click', () => {
+        this.closeVariantSelector();
+        this.closeSelector();
+      });
+
+      this.variantSelector?.addEventListener('click', (e) => {
+        if (e.target === this.variantSelector) {
+          this.closeVariantSelector();
+          this.closeSelector();
+        }
+      });
+
+      this.addVariantBtn?.addEventListener('click', () => {
+        const selectedVariantId = parseInt(this.addVariantBtn.dataset.variantId);
+        if (!selectedVariantId) return;
+
+        const product = this.allProducts.find(p => 
+          p.variants.some(v => v.id === selectedVariantId)
+        );
+        
+        if (!product) return;
+
+                  const variant = product.variants.find(v => v.id === selectedVariantId);
+          if (!variant || !variant.available) return;
+
+          // If this is the only variant or it's the default variant, just use the product title
+          const isDefaultVariant = product.variants.length === 1 || variant.title.toLowerCase().includes('default');
+          const displayTitle = isDefaultVariant ? product.title : `${product.title} - ${variant.title}`;
+
+          // Find first empty slot or add new one
+          const emptyIndex = this.selectedItems.findIndex(item => item === null);
+          if (emptyIndex !== -1) {
+            this.selectedItems[emptyIndex] = { 
+              ...variant, 
+              productTitle: product.title,
+              displayTitle: displayTitle
+            };
+          } else if (this.selectedItems.length < this.maxSize) {
+            this.selectedItems.push({ 
+              ...variant, 
+              productTitle: product.title,
+              displayTitle: displayTitle
+            });
+        }
+
+        this.updateDisplay();
+        this.closeVariantSelector();
+        this.closeSelector();
+      });
+
+      // Remove items and handle quantity changes
+      this.selectedItemsContainer.addEventListener('click', (e) => {
+        const target = e.target;
+        const index = parseInt(target.dataset.index);
+
+        if (target.closest('.remove-item')) {
+          const removeIndex = parseInt(target.closest('.selected-item').dataset.index);
+          this.removeItem(removeIndex);
+        } else if (target.matches('[data-decrease-qty]') && !isNaN(index)) {
+          this.updateItemQuantity(index, -1);
+        } else if (target.matches('[data-increase-qty]') && !isNaN(index)) {
+          this.updateItemQuantity(index, 1);
+        }
+      });
+
+      // Quantity controls
+      this.qtyDecrease.addEventListener('click', () => {
+        const current = parseInt(this.quantityInput.value);
+        if (current > 1) {
+          this.quantityInput.value = current - 1;
+          this.updateTotal();
+        }
+      });
+
+      this.qtyIncrease.addEventListener('click', () => {
+        const current = parseInt(this.quantityInput.value);
+        this.quantityInput.value = current + 1;
+        this.updateTotal();
+      });
+
+      this.quantityInput.addEventListener('change', () => this.updateTotal());
+
+      // Form submission
+      this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+    }
+
+    addEmptySlot() {
+      this.selectedItems.push(null);
+      this.updateDisplay();
+    }
+
+    openSelector() {
+      this.selector.removeAttribute('hidden');
+      this.renderSelectorProducts();
+      setTimeout(() => this.selector.classList.add('show'), 10);
+      document.body.style.overflow = 'hidden';
+    }
+
+    closeSelector() {
+      this.selector.classList.remove('show');
+      setTimeout(() => {
+        this.selector.setAttribute('hidden', '');
+        document.body.style.overflow = '';
+      }, 300);
+    }
+
+
+
+    renderSelectorProducts(append = false) {
+      const start = append ? this.currentPage * this.productsPerPage : 0;
+      const end = (this.currentPage + 1) * this.productsPerPage;
+      const products = this.filteredProducts.slice(start, end);
+
+      // Get list of selected variant IDs and product IDs
+      const selectedVariantIds = this.selectedItems
+        .filter(item => item !== null)
+        .map(item => item.id);
+      
+      const selectedProductIds = this.selectedItems
+        .filter(item => item !== null)
+        .map(item => {
+          const product = this.allProducts.find(p => 
+            p.variants.some(v => v.id === item.id)
+          );
+          return product ? product.id : null;
+        })
+        .filter(id => id !== null);
+
+      const productsHtml = products.map(product => {
+        const hasAvailableVariants = product.variants.some(v => v.available);
+        const firstAvailableVariant = product.variants.find(v => v.available) || product.variants[0];
+        const isSelected = selectedProductIds.includes(product.id);
+        
+        return `
+          <div class="selector-item ${!hasAvailableVariants ? 'unavailable' : ''} ${isSelected ? 'selected' : ''}" 
+               data-product-id="${product.id}">
+            <div class="image-container">
+              <img src="${product.imageHigh || product.image}" alt="${product.title}" loading="lazy">
+            </div>
+            <h4>${product.title}</h4>
+            <div class="price">${this.formatMoney(firstAvailableVariant.price)}</div>
+            ${!hasAvailableVariants ? '<div class="unavailable-badge">Sold Out</div>' : ''}
+            ${isSelected ? '<div class="selected-badge">✓ Selected</div>' : ''}
+            ${product.hasVariants ? '<div class="variants-badge">Multiple Options</div>' : ''}
+          </div>
+        `;
+      }).join('');
+
+      if (append) {
+        this.selectorGrid.insertAdjacentHTML('beforeend', productsHtml);
+      } else {
+        this.selectorGrid.innerHTML = productsHtml;
+      }
+
+      // Show/hide load more button
+      const hasMore = end < this.filteredProducts.length;
+      this.loadMoreBtn.classList.toggle('hidden', !hasMore);
+
+      // Update load more button text with remaining count
+      if (hasMore) {
+        const remaining = this.filteredProducts.length - end;
+        this.loadMoreBtn.textContent = `Load ${Math.min(remaining, this.productsPerPage)} More Items (${remaining} remaining)`;
+      }
+    }
+
+    loadMore() {
+      this.currentPage++;
+      this.renderSelectorProducts(true); // Append new products instead of replacing
+    }
+
+    selectProduct(variantId) {
+      const product = this.allProducts.find(p => p.variantId === variantId);
+      if (!product) return;
+
+      // Find first empty slot
+      const emptyIndex = this.selectedItems.findIndex(item => item === null);
+      if (emptyIndex !== -1) {
+        this.selectedItems[emptyIndex] = { ...product };
+      } else if (this.selectedItems.length < this.maxSize) {
+        // Add new slot if under max
+        this.selectedItems.push({ ...product });
+      }
+
+      this.updateDisplay();
+      this.updateSelectorHighlights(); // Update selected items in modal
+    }
+
+    removeItem(index) {
+      // Don't remove if we're at minimum and this isn't an empty slot
+      if (this.getFilledCount() <= this.minSize && this.selectedItems[index] !== null) {
+        return;
+      }
+
+      this.selectedItems.splice(index, 1);
+
+      // Ensure we never go below minimum slots
+      while (this.selectedItems.length < this.minSize) {
+        this.selectedItems.push(null);
+      }
+
+      this.updateDisplay();
+    }
+
+    getFilledCount() {
+      return this.selectedItems.filter(item => item !== null).length;
+    }
+
+    updateDisplay() {
+      this.renderSelectedItems();
+      this.updateTotal();
+      this.updateSubmitButton();
+      this.updateAddButton();
+    }
+
+    renderSelectedItems() {
+      this.selectedItemsContainer.innerHTML = this.selectedItems.map((item, index) => {
+        if (item === null) {
+          return `
+          <div class="selected-item empty-slot" data-index="${index}">
+            <div class="empty-placeholder">
+              <div class="placeholder-icon">+</div>
+              <div class="placeholder-text">Choose an item</div>
+            </div>
+          </div>
+        `;
+        }
+
+        return `
+        <div class="selected-item filled-slot" data-index="${index}">
+          <button type="button" class="remove-item" title="Remove item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+          <img src="${item.imageHigh}" alt="${item.title}" class="item-image">
+          <div class="item-details">
+            <h4>${item.displayTitle || item.title}</h4>
+            <div class="item-price">${this.formatMoney(item.price)}</div>
+            <div class="item-quantity">
+              <button type="button" class="qty-btn" data-decrease-qty data-index="${index}">-</button>
+              <input type="number" value="${item.quantity || 1}" min="1" readonly data-item-qty data-index="${index}">
+              <button type="button" class="qty-btn" data-increase-qty data-index="${index}">+</button>
+            </div>
+          </div>
+        </div>
+      `;
+      }).join('');
+    }
+
+    updateTotal() {
+      const bundleTotal = this.selectedItems.reduce((total, item) => {
+        return total + (item ? item.price : 0);
+      }, 0);
+
+      const quantity = parseInt(this.quantityInput.value);
+      const finalTotal = bundleTotal * quantity;
+
+      this.totalElement.textContent = this.formatMoney(finalTotal);
+
+      const filledCount = this.getFilledCount();
+      this.countElement.textContent = `${filledCount} item${filledCount !== 1 ? 's' : ''}`;
+    }
+
+    updateSubmitButton() {
+      const filledCount = this.getFilledCount();
+      const hasEmptySlots = this.selectedItems.some(item => item === null);
+
+      if (hasEmptySlots) {
+        this.submitBtn.disabled = true;
+        this.submitText.textContent = `Choose ${this.selectedItems.length - filledCount} more item${this.selectedItems.length - filledCount !== 1 ? 's' : ''}`;
+      } else {
+        this.submitBtn.disabled = false;
+        this.submitText.textContent = 'Add Bundle to Cart';
+      }
+    }
+
+    updateAddButton() {
+      if (this.selectedItems.length >= this.maxSize) {
+        this.addBtn.style.display = 'none';
+      } else {
+        this.addBtn.style.display = 'flex';
+        const emptySlots = this.selectedItems.filter(item => item === null).length;
+        if (emptySlots > 0) {
+          this.addBtn.textContent = 'Choose Items';
+        } else {
+          this.addBtn.innerHTML = `
+          <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="16"></line>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+          </svg>
+          Add Another Item
+        `;
+        }
+      }
+    }
+
+    async handleSubmit(e) {
+      e.preventDefault();
+
+      const filledItems = this.selectedItems.filter(item => item !== null);
+      if (filledItems.length < this.minSize) {
+        alert(`Please select at least ${this.minSize} items.`);
+        return;
+      }
+
+      // Show loading state
+      this.submitBtn.disabled = true;
+      this.submitText.style.opacity = '0';
+      this.submitBtn.querySelector('.btn-loader').hidden = false;
+
+      try {
+        const quantity = parseInt(this.quantityInput.value) || 1;
+        const bundleId = Date.now().toString();
+
+        const bundleItems = filledItems.map(item => ({
+          id: item.id,
+          quantity: (item.quantity || 1) * quantity,
+          properties: {
+            '_time': bundleId,
+            '_bundle': 'true',
+            '_product': item.productTitle || '',
+            '_variant': item.title || '',
+            '_item_quantity': item.quantity || 1,
+            '_bundle_quantity': quantity
+          }
+        }));
+
+        // Update bundle config
+        this.bundleConfig.value = JSON.stringify(filledItems.map(item => ({
+          id: item.id,
+          title: item.title,
+          productTitle: item.productTitle,
+          quantity: quantity,
+          price: item.price
+        })));
+
+        const response = await fetch('/cart/add.js', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ items: bundleItems })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to add bundle to cart');
+        }
+
+        // Success - redirect to cart
+        window.location.href = '/cart';
+
+      } catch (error) {
+        console.error('Error adding bundle to cart:', error);
+        alert('There was an error adding the bundle to cart. Please try again.');
+
+        // Reset loading state
+        this.submitBtn.disabled = false;
+        this.submitText.style.opacity = '1';
+        this.submitBtn.querySelector('.btn-loader').hidden = true;
+      }
+    }
+
+    formatMoney(cents) {
+      return (cents / 100).toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      });
+    }
+
+    updateSelectorHighlights() {
+      // Re-render the selector products to update highlights
+      this.renderSelectorProducts();
+    }
+
+    updateItemQuantity(index, change) {
+      if (index < 0 || index >= this.selectedItems.length) return;
+      
+      const item = this.selectedItems[index];
+      if (!item) return;
+
+      const newQuantity = (item.quantity || 1) + change;
+      if (newQuantity < 1) return;
+
+      this.selectedItems[index] = {
+        ...item,
+        quantity: newQuantity
+      };
+
+      this.updateDisplay();
     }
 
     openVariantSelector(product) {
