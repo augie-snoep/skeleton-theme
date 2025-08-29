@@ -766,6 +766,30 @@ A modern, step-by-step bundle product form with smooth UX
     margin-top: 0.5rem;
   }
 
+  .variant-selected {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: #3b82f6;
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  }
+
+  .variant-option.selected {
+    border-color: #3b82f6;
+    background: #f0f7ff;
+  }
+
+  .variant-option.selected:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
   .add-variant-btn {
     width: calc(100% - 2.5rem);
     margin: 0 1.25rem 1.25rem;
@@ -1301,9 +1325,12 @@ A modern, step-by-step bundle product form with smooth UX
       const productsHtml = products.map(product => {
         const hasAvailableVariants = product.variants.some(v => v.available);
         const firstAvailableVariant = product.variants.find(v => v.available) || product.variants[0];
+        const isSelected = product.variants.some(variant => 
+          selectedVariantIds.includes(variant.id)
+        );
         
         return `
-          <div class="selector-item ${!hasAvailableVariants ? 'unavailable' : ''} ${selectedVariantIds.includes(firstAvailableVariant.id) ? 'selected' : ''}" 
+          <div class="selector-item ${!hasAvailableVariants ? 'unavailable' : ''} ${isSelected ? 'selected' : ''}" 
                data-product-id="${product.id}">
             <div class="image-container">
               <img src="${product.imageHigh || product.image}" alt="${product.title}" loading="lazy">
@@ -1311,7 +1338,7 @@ A modern, step-by-step bundle product form with smooth UX
             <h4>${product.title}</h4>
             <div class="price">${this.formatMoney(firstAvailableVariant.price)}</div>
             ${!hasAvailableVariants ? '<div class="unavailable-badge">Sold Out</div>' : ''}
-            ${selectedVariantIds.includes(firstAvailableVariant.id) ? '<div class="selected-badge">✓ Selected</div>' : ''}
+            ${isSelected ? '<div class="selected-badge">✓ Selected</div>' : ''}
             ${product.hasVariants ? '<div class="variants-badge">Multiple Options</div>' : ''}
           </div>
         `;
@@ -1553,21 +1580,29 @@ A modern, step-by-step bundle product form with smooth UX
       this.variantProductTitle.textContent = product.title;
 
       // Create variant options
-      const variantsHtml = product.variants.map(variant => `
-        <div class="variant-option ${!variant.available ? 'unavailable' : ''}" 
-             data-variant-id="${variant.id}">
-          <div class="variant-option-content">
-            ${variant.image ? `
-              <img src="${variant.image}" alt="${variant.title}" class="variant-option-image" width="50" height="50">
-            ` : ''}
-            <div class="variant-option-details">
-              <span class="variant-title">${variant.title}</span>
-              <span class="variant-price">${this.formatMoney(variant.price)}</span>
+      const selectedVariantIds = this.selectedItems
+        .filter(item => item !== null)
+        .map(item => item.id);
+
+      const variantsHtml = product.variants.map(variant => {
+        const isSelected = selectedVariantIds.includes(variant.id);
+        return `
+          <div class="variant-option ${!variant.available ? 'unavailable' : ''} ${isSelected ? 'selected' : ''}" 
+               data-variant-id="${variant.id}">
+            <div class="variant-option-content">
+              ${variant.image ? `
+                <img src="${variant.image}" alt="${variant.title}" class="variant-option-image" width="50" height="50">
+              ` : ''}
+              <div class="variant-option-details">
+                <span class="variant-title">${variant.title}</span>
+                <span class="variant-price">${this.formatMoney(variant.price)}</span>
+              </div>
             </div>
+            ${!variant.available ? '<div class="variant-unavailable">Sold Out</div>' : ''}
+            ${isSelected ? '<div class="variant-selected">✓ In Bundle</div>' : ''}
           </div>
-          ${!variant.available ? '<div class="variant-unavailable">Sold Out</div>' : ''}
-        </div>
-      `).join('');
+        `;
+      }).join('');
 
       this.variantOptions.innerHTML = variantsHtml;
 
